@@ -23,7 +23,7 @@ using UVtools.Core.Operations;
 
 namespace UVtools.Core.FileFormats;
 
-public sealed class PhotonWorkshopFile : FileFormat
+public sealed class AnycubicFile : FileFormat
 {
     #region Constants
     public const byte VERSION_1 = 1;       // 0x1
@@ -90,6 +90,7 @@ public sealed class PhotonWorkshopFile : FileFormat
         PhotonD2,
         PhotonMono,
         PhotonMono2,
+        PhotonMono4,
         PhotonMonoSE,
         PhotonMono4K,
         PhotonMonoX,
@@ -715,22 +716,23 @@ public sealed class PhotonWorkshopFile : FileFormat
             layer.LiftSpeed = SpeedConverter.Convert(LiftSpeed, SpeedUnit.MillimetersPerSecond, CoreSpeedUnit);
         }
 
-        public Mat Decode(PhotonWorkshopFile slicerFile, bool consumeData = true)
+        public Mat Decode(AnycubicFile slicerFile, bool consumeData = true)
         {
-            var result = slicerFile.RleFormat == PhotonRleFormat.PWS ? DecodePWS(slicerFile) : DecodePW0(slicerFile);
+            var result = slicerFile.RleFormat == PhotonRleFormat.PWS ? DecodePWS(slicerFile) : DecodePW0(slicerFile.CreateMat(), EncodedRle);
             if (consumeData)
                 EncodedRle = null!;
 
             return result;
         }
 
-        public byte[] Encode(PhotonWorkshopFile slicerFile, Mat image)
+        public byte[] Encode(AnycubicFile slicerFile, Mat image)
         {
             EncodedRle = slicerFile.RleFormat == PhotonRleFormat.PWS ? EncodePWS(slicerFile, image) : EncodePW0(image);
+            DataLength = (uint)EncodedRle.Length;
             return EncodedRle;
         }
 
-        private unsafe Mat DecodePWS(PhotonWorkshopFile slicerFile)
+        private unsafe Mat DecodePWS(AnycubicFile slicerFile)
         {
             var image = EmguExtensions.InitMat(slicerFile.Resolution);
             var span = image.GetBytePointer();
@@ -786,7 +788,7 @@ public sealed class PhotonWorkshopFile : FileFormat
             return image;
         }
 
-        public unsafe byte[] EncodePWS(PhotonWorkshopFile slicerFile, Mat image)
+        public unsafe byte[] EncodePWS(AnycubicFile slicerFile, Mat image)
         {
             List<byte> rawData = new();
             var span = image.GetBytePointer();
@@ -855,152 +857,6 @@ public sealed class PhotonWorkshopFile : FileFormat
             DataLength = (uint) rawData.Count;
 
             return rawData.ToArray();
-        }
-
-        private Mat DecodePW0(PhotonWorkshopFile slicerFile)
-        {
-            var mat = slicerFile.CreateMat();
-            var imageLength = mat.GetLength();
-
-            int pixelPos = 0;
-            for (int i = 0; i < EncodedRle.Length; i++)
-            {
-                byte b = EncodedRle[i];
-                int code = b >> 4;
-                int repeat = b & 0xf;
-                byte color;
-                switch (code)
-                {
-                    case 0x0:
-                        color = 0;
-                        i++;
-                        //reps = reps * 256 + EncodedRle[i];
-                        if (i >= EncodedRle.Length)
-                        {
-                            repeat = imageLength - pixelPos;
-                            break;
-                        }
-
-                        repeat = (repeat << 8) + EncodedRle[i];
-                        break;
-                    case 0xf:
-                        color = 255;
-                        i++;
-                        //reps = reps * 256 + EncodedRle[i];
-                        if (i >= EncodedRle.Length)
-                        {
-                            repeat = imageLength - pixelPos;
-                            break;
-                        }
-
-                        repeat = (repeat << 8) + EncodedRle[i];
-                        break;
-                    default:
-                        color = (byte) ((code << 4) | code);
-                        if (i >= EncodedRle.Length)
-                        {
-                            repeat = imageLength - pixelPos;
-                        }
-                        break;
-                }
-
-                //color &= 0xff;
-
-                if (pixelPos + repeat > imageLength)
-                {
-                    mat.Dispose();
-                    throw new FileLoadException($"Image ran off the end: {pixelPos} + {repeat} = {pixelPos + repeat}, expecting: {imageLength}");
-                }
-
-                // We only need to set the non-zero pixels
-                mat.FillSpan(ref pixelPos, repeat, color);
-
-
-                if (pixelPos == imageLength)
-                {
-                    //i++;
-                    break;
-                }
-            }
-
-            if (pixelPos > 0 && pixelPos != imageLength)
-            {
-                mat.Dispose();
-                throw new FileLoadException($"Image ended short: {pixelPos}, expecting: {imageLength}");
-            }
-
-            return mat;
-        }
-
-        public unsafe byte[] EncodePW0(Mat image)
-        {
-            List<byte> rawData = new();
-            var span = image.GetBytePointer();
-            var imageLength = image.GetLength();
-
-            int lastColor = -1;
-            int reps = 0;
-
-            void PutReps()
-            {
-                while (reps > 0)
-                {
-                    int done = reps;
-
-                    if (lastColor is 0 or 0xf)
-                    {
-                        if (done > RLE4EncodingLimit)
-                        {
-                            done = RLE4EncodingLimit;
-                        }
-                        //more:= []byte{ 0, 0}
-                        //binary.BigEndian.PutUint16(more, uint16(done | (color << 12)))
-
-                        //rle = append(rle, more...)
-
-                        ushort more = (ushort)(done | (lastColor << 12));
-                        rawData.Add((byte)(more >> 8));
-                        rawData.Add((byte)more);
-                    }
-                    else
-                    {
-                        if (done > 0xf)
-                        {
-                            done = 0xf;
-                        }
-                        rawData.Add((byte)(done | lastColor << 4));
-                    }
-
-                    reps -= done;
-                }
-            }
-
-            for (int i = 0; i < imageLength; i++)
-            {
-                int color = span[i] >> 4;
-
-                if (color == lastColor)
-                {
-                    reps++;
-                }
-                else
-                {
-                    PutReps();
-                    lastColor = color;
-                    reps = 1;
-                }
-            }
-
-            PutReps();
-
-            EncodedRle = rawData.ToArray();
-            DataLength = (uint)rawData.Count;
-
-            ushort crc = CRCRle4(EncodedRle);
-            rawData.Add((byte)(crc >> 8));
-            rawData.Add((byte)crc);
-
-            return EncodedRle;
         }
 
         public static ushort CRCRle4(byte[] data)
@@ -1185,27 +1041,28 @@ public sealed class PhotonWorkshopFile : FileFormat
 
     public override FileExtension[] FileExtensions { get; } = {
 
-        new(typeof(PhotonWorkshopFile), "pws", "Photon / Photon S (PWS)"),
-        new(typeof(PhotonWorkshopFile), "pw0", "Photon Zero (PW0)"),
-        new(typeof(PhotonWorkshopFile), "pwx", "Photon X (PWX)"),
-        new(typeof(PhotonWorkshopFile), "dlp", "Photon Ultra (DLP)"),
-        new(typeof(PhotonWorkshopFile), "dl2p", "Photon Photon D2 (DL2P)"),
-        new(typeof(PhotonWorkshopFile), "pwmx", "Photon Mono X (PWMX)"),
-        new(typeof(PhotonWorkshopFile), "pmx2", "Photon Mono X2 (PMX2)"),
-        new(typeof(PhotonWorkshopFile), "pwmb", "Photon Mono X 6K / Photon M3 Plus (PWMB)"),
-        new(typeof(PhotonWorkshopFile), "px6s", "Photon Mono X 6Ks (PX6S)"),
-        new(typeof(PhotonWorkshopFile), "pwmo", "Photon Mono (PWMO)"),
-        new(typeof(PhotonWorkshopFile), "pm3n", "Photon Mono 2 (PM3N)"),
-        new(typeof(PhotonWorkshopFile), "pwms", "Photon Mono SE (PWMS)"),
-        new(typeof(PhotonWorkshopFile), "pwma", "Photon Mono 4K (PWMA)"),
-        new(typeof(PhotonWorkshopFile), "pmsq", "Photon Mono SQ (PMSQ)"),
-        new(typeof(PhotonWorkshopFile), "pm3", "Photon M3 (PM3)"),
-        new(typeof(PhotonWorkshopFile), "pm3m", "Photon M3 Max (PM3M)"),
-        new(typeof(PhotonWorkshopFile), "pm3r", "Photon M3 Premium (PM3R)"),
-        new(typeof(PhotonWorkshopFile), "pm5", "Photon Mono M5 (PM5)"),
-        new(typeof(PhotonWorkshopFile), "pm5s", "Photon Mono M5s (PM5s)"),
-        new(typeof(PhotonWorkshopFile), "m5sp", "Photon Mono M5s Pro (M5sp)"),
-        new(typeof(PhotonWorkshopFile), "pwc", "Anycubic Custom Machine (PWC)"),
+        new(typeof(AnycubicFile), "pws", "Photon / Photon S (PWS)"),
+        new(typeof(AnycubicFile), "pw0", "Photon Zero (PW0)"),
+        new(typeof(AnycubicFile), "pwx", "Photon X (PWX)"),
+        new(typeof(AnycubicFile), "dlp", "Photon Ultra (DLP)"),
+        new(typeof(AnycubicFile), "dl2p", "Photon Photon D2 (DL2P)"),
+        new(typeof(AnycubicFile), "pwmx", "Photon Mono X (PWMX)"),
+        new(typeof(AnycubicFile), "pmx2", "Photon Mono X2 (PMX2)"),
+        new(typeof(AnycubicFile), "pwmb", "Photon Mono X 6K / Photon M3 Plus (PWMB)"),
+        new(typeof(AnycubicFile), "px6s", "Photon Mono X 6Ks (PX6S)"),
+        new(typeof(AnycubicFile), "pwmo", "Photon Mono (PWMO)"),
+        new(typeof(AnycubicFile), "pm3n", "Photon Mono 2 (PM3N)"),
+        new(typeof(AnycubicFile), "pm4n", "Photon Mono 4 (PM4N)"),
+        new(typeof(AnycubicFile), "pwms", "Photon Mono SE (PWMS)"),
+        new(typeof(AnycubicFile), "pwma", "Photon Mono 4K (PWMA)"),
+        new(typeof(AnycubicFile), "pmsq", "Photon Mono SQ (PMSQ)"),
+        new(typeof(AnycubicFile), "pm3", "Photon M3 (PM3)"),
+        new(typeof(AnycubicFile), "pm3m", "Photon M3 Max (PM3M)"),
+        new(typeof(AnycubicFile), "pm3r", "Photon M3 Premium (PM3R)"),
+        new(typeof(AnycubicFile), "pm5", "Photon Mono M5 (PM5)"),
+        new(typeof(AnycubicFile), "pm5s", "Photon Mono M5s (PM5s)"),
+        new(typeof(AnycubicFile), "m5sp", "Photon Mono M5s Pro (M5sp)"),
+        new(typeof(AnycubicFile), "pwc", "Anycubic Custom Machine (PWC)"),
         //new(typeof(PhotonWorkshopFile), "pwmb", "Photon M3 Plus (PWMB)"),
     };
     
@@ -1366,6 +1223,7 @@ public sealed class PhotonWorkshopFile : FileFormat
                 AnyCubicMachine.PhotonD2 => 130.56f,
                 AnyCubicMachine.PhotonMono => 82.62f,
                 AnyCubicMachine.PhotonMono2 => 143.36f,
+                AnyCubicMachine.PhotonMono4 => 153.408f,
                 AnyCubicMachine.PhotonMonoSE => 82.62f,
                 AnyCubicMachine.PhotonMono4K => 134.40f,
                 AnyCubicMachine.PhotonMonoX => 192,
@@ -1398,6 +1256,7 @@ public sealed class PhotonWorkshopFile : FileFormat
                 AnyCubicMachine.PhotonD2 => 73.44f,
                 AnyCubicMachine.PhotonMono => 130.56f,
                 AnyCubicMachine.PhotonMono2 => 89.60f,
+                AnyCubicMachine.PhotonMono4 => 87.040f,
                 AnyCubicMachine.PhotonMonoSE => 130.56f,
                 AnyCubicMachine.PhotonMono4K => 84,
                 AnyCubicMachine.PhotonMonoX => 120,
@@ -1431,6 +1290,7 @@ public sealed class PhotonWorkshopFile : FileFormat
                 AnyCubicMachine.PhotonD2 => 165,
                 AnyCubicMachine.PhotonMono => 165,
                 AnyCubicMachine.PhotonMono2 => 165,
+                AnyCubicMachine.PhotonMono4 => 165,
                 AnyCubicMachine.PhotonMonoSE => 160,
                 AnyCubicMachine.PhotonMono4K => 165,
                 AnyCubicMachine.PhotonMonoX => 245,
@@ -1729,6 +1589,7 @@ public sealed class PhotonWorkshopFile : FileFormat
                 AnyCubicMachine.PhotonD2      => "Photon D2",
                 AnyCubicMachine.PhotonMono    => "Photon Mono",
                 AnyCubicMachine.PhotonMono2   => "Photon Mono 2",
+                AnyCubicMachine.PhotonMono4   => "Photon Mono 4",
                 AnyCubicMachine.PhotonMonoSE  => "Photon Mono SE",
                 AnyCubicMachine.PhotonMono4K  => "Photon Mono 4K",
                 AnyCubicMachine.PhotonMonoX   => "Photon Mono X",
@@ -1830,6 +1691,11 @@ public sealed class PhotonWorkshopFile : FileFormat
                 return AnyCubicMachine.PhotonMono2;
             }
 
+            if (FileEndsWith(".pm4n"))
+            {
+                return AnyCubicMachine.PhotonMono4;
+            }
+
             if (FileEndsWith(".pwms"))
             {
                 return AnyCubicMachine.PhotonMonoSE;
@@ -1906,7 +1772,7 @@ public sealed class PhotonWorkshopFile : FileFormat
     #endregion
 
     #region Constructors
-    public PhotonWorkshopFile()
+    public AnycubicFile()
     {
     }
     #endregion
@@ -2341,6 +2207,148 @@ public sealed class PhotonWorkshopFile : FileFormat
 
         outputFile.Seek(FileMarkSettings.LayerDefinitionAddress, SeekOrigin.Begin);
         outputFile.WriteSerialize(LayersDefinition);
+    }
+
+
+    public static Mat DecodePW0(Mat mat, byte[] encodedRle)
+    {
+        var imageLength = mat.GetLength();
+
+        int pixelPos = 0;
+        for (int i = 0; i < encodedRle.Length; i++)
+        {
+            byte b = encodedRle[i];
+            int code = b >> 4;
+            int repeat = b & 0xf;
+            byte color;
+            switch (code)
+            {
+                case 0x0:
+                    color = 0;
+                    i++;
+                    //reps = reps * 256 + EncodedRle[i];
+                    if (i >= encodedRle.Length)
+                    {
+                        repeat = imageLength - pixelPos;
+                        break;
+                    }
+
+                    repeat = (repeat << 8) + encodedRle[i];
+                    break;
+                case 0xf:
+                    color = 255;
+                    i++;
+                    //reps = reps * 256 + EncodedRle[i];
+                    if (i >= encodedRle.Length)
+                    {
+                        repeat = imageLength - pixelPos;
+                        break;
+                    }
+
+                    repeat = (repeat << 8) + encodedRle[i];
+                    break;
+                default:
+                    color = (byte)((code << 4) | code);
+                    if (i >= encodedRle.Length)
+                    {
+                        repeat = imageLength - pixelPos;
+                    }
+                    break;
+            }
+
+            //color &= 0xff;
+
+            if (pixelPos + repeat > imageLength)
+            {
+                mat.Dispose();
+                throw new FileLoadException($"Image ran off the end: {pixelPos} + {repeat} = {pixelPos + repeat}, expecting: {imageLength}");
+            }
+
+            // We only need to set the non-zero pixels
+            mat.FillSpan(ref pixelPos, repeat, color);
+
+
+            if (pixelPos == imageLength)
+            {
+                //i++;
+                break;
+            }
+        }
+
+        if (pixelPos > 0 && pixelPos != imageLength)
+        {
+            mat.Dispose();
+            throw new FileLoadException($"Image ended short: {pixelPos}, expecting: {imageLength}");
+        }
+
+        return mat;
+    }
+
+    public static byte[] EncodePW0(Mat image)
+    {
+        List<byte> rawData = new();
+        var span = image.GetDataByteSpan();
+
+        int lastColor = -1;
+        int reps = 0;
+
+        void PutReps()
+        {
+            while (reps > 0)
+            {
+                int done = reps;
+
+                if (lastColor is 0 or 0xf)
+                {
+                    if (done > RLE4EncodingLimit)
+                    {
+                        done = RLE4EncodingLimit;
+                    }
+
+                    ushort more = (ushort)(done | (lastColor << 12));
+                    rawData.Add((byte)(more >> 8));
+                    rawData.Add((byte)more);
+                }
+                else
+                {
+                    if (done > 0xf)
+                    {
+                        done = 0xf;
+                    }
+                    rawData.Add((byte)(done | lastColor << 4));
+                }
+
+                reps -= done;
+            }
+        }
+
+        for (int i = 0; i < span.Length; i++)
+        {
+            int color = span[i] >> 4;
+
+            if (color == lastColor)
+            {
+                reps++;
+            }
+            else
+            {
+                PutReps();
+                lastColor = color;
+                reps = 1;
+            }
+        }
+
+        PutReps();
+
+        return rawData.ToArray();
+        /*EncodedRle = rawData.ToArray();
+        DataLength = (uint)rawData.Count;
+
+        ushort crc = CRCRle4(EncodedRle);
+        rawData.Add((byte)(crc >> 8));
+        rawData.Add((byte)crc);
+
+        return EncodedRle;*/
     }
 
     #endregion

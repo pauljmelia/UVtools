@@ -483,20 +483,18 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
         new ChituboxZipFile(), // Zip
         new ChituboxFile(), // cbddlp, cbt, photon
         new CTBEncryptedFile(), // encrypted ctb
-        new PhotonSFile(), // photons
+        new AnycubicPhotonSFile(), // photons
         new PHZFile(), // phz
-        new PhotonWorkshopFile(), // PSW
-#if DEBUG
-        new PWSZFile(), // PWSZ
-#endif
+        new AnycubicFile(), // PSW, PW0
+        new AnycubicZipFile(), // PWSZ
         new CWSFile(), // CWS
         new AnetFile(), // Anet N4, N7
         new LGSFile(), // LGS, LGS30
         new VDAFile(), // VDA
         new VDTFile(), // VDT
         //new CXDLPv1File(),   // Creality Box v1
-        new CXDLPFile(), // Creality Box
-        new CXDLPv4File(), // Creality Box
+        new CrealityCXDLPFile(), // Creality Box
+        new CrealityCXDLPv4File(), // Creality Box
         new NanoDLPFile(), // NanoDLP
         new KlipperFile(), // Klipper
 
@@ -815,7 +813,7 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
         {
             var bytesPerPixel = dataType is "RGB888" or "BGR888" ? 3 : 2;
             var bytes = new byte[mat.Width * mat.Height * bytesPerPixel];
-            uint index = 0;
+            int index = 0;
             var span = mat.GetDataByteReadOnlySpan();
             for (int i = 0; i < span.Length;)
             {
@@ -4457,18 +4455,8 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
         var tempFile = TemporaryOutputFileFullPath;
         if (File.Exists(tempFile)) File.Delete(tempFile);
 
-        // Sanitize Version
-        if (AvailableVersionsCount > 0)
-        {
-            var possibleVersions = GetAvailableVersionsForExtension(FileExtension);
-            if (possibleVersions.Length > 0)
-            {
-                if (!possibleVersions.Contains(Version)) // Version not found on possible versions, set to last
-                {
-                    Version = possibleVersions[^1];
-                }
-            }
-        }
+        // Sanitize Version after file name is set
+        SanitizeVersion();
 
         // Make sure thumbnails are all set, otherwise clone/create them
         SanitizeThumbnails(FileType != FileFormatType.Archive);
@@ -6279,10 +6267,12 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
         if (!convertSlicerFile.OnBeforeConvertFrom(this)) return null;
         if (!OnBeforeConvertTo(convertSlicerFile)) return null;
 
-        if (version > 0 && version != DefaultVersion)
+        if (version > 0 && version != convertSlicerFile.Version)
         {
             convertSlicerFile.Version = version;
         }
+
+        convertSlicerFile.SanitizeVersion();
 
         convertSlicerFile.SuppressRebuildPropertiesWork(() =>
         {
@@ -6730,7 +6720,7 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
     /// <param name="x">X position in pixels</param>
     /// <param name="precision">Decimal precision</param>
     /// <returns>Display position in millimeters</returns>
-    public float PixelToDisplayPositionX(int x, byte precision = 3) => (float)Math.Round(PixelWidth * x, precision);
+    public float PixelToDisplayPositionX(int x, byte precision = DisplayFloatPrecision) => (float)Math.Round(PixelWidth * x, precision);
 
     /// <summary>
     /// From a pixel position get the equivalent position on the display
@@ -6738,7 +6728,7 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
     /// <param name="y">Y position in pixels</param>
     /// <param name="precision">Decimal precision</param>
     /// <returns>Display position in millimeters</returns>
-    public float PixelToDisplayPositionY(int y, byte precision = 3) => (float)Math.Round(PixelHeight * y, precision);
+    public float PixelToDisplayPositionY(int y, byte precision = DisplayFloatPrecision) => (float)Math.Round(PixelHeight * y, precision);
 
     /// <summary>
     /// From a pixel position get the equivalent position on the display
@@ -6747,8 +6737,8 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
     /// <param name="y">Y position in pixels</param>
     /// <param name="precision">Decimal precision</param>
     /// <returns>Resolution position in pixels</returns>
-    public PointF PixelToDisplayPosition(int x, int y, byte precision = 3) =>new(PixelToDisplayPositionX(x, precision), PixelToDisplayPositionY(y, precision));
-    public PointF PixelToDisplayPosition(Point point, byte precision = 3) => new(PixelToDisplayPositionX(point.X, precision), PixelToDisplayPositionY(point.Y, precision));
+    public PointF PixelToDisplayPosition(int x, int y, byte precision = DisplayFloatPrecision) =>new(PixelToDisplayPositionX(x, precision), PixelToDisplayPositionY(y, precision));
+    public PointF PixelToDisplayPosition(Point point, byte precision = DisplayFloatPrecision) => new(PixelToDisplayPositionX(point.X, precision), PixelToDisplayPositionY(point.Y, precision));
 
     /// <summary>
     /// From a pixel position get the equivalent position on the display
@@ -6765,12 +6755,17 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
     public int DisplayToPixelPositionY(float y) => (int)(y * Yppmm);
 
     /// <summary>
-    /// From a pixel position get the equivalent position on the display
+    /// From a display position get the equivalent position on the pixel
     /// </summary>
     /// <param name="x">X position in millimeters</param>
     /// <param name="y">Y position in millimeters</param>
     /// <returns>Resolution position in pixels</returns>
     public Point DisplayToPixelPosition(float x, float y) => new(DisplayToPixelPositionX(x), DisplayToPixelPositionY(y));
+    /// <summary>
+    /// From a display position get the equivalent position on the pixel
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
     public Point DisplayToPixelPosition(PointF point) => new(DisplayToPixelPositionX(point.X), DisplayToPixelPositionY(point.Y));
 
     public bool SanitizeBoundingRectangle(ref Rectangle rectangle)
@@ -7418,6 +7413,29 @@ public abstract class FileFormat : BindableBase, IDisposable, IEquatable<FileFor
         }
 
         return appliedCorrections;
+    }
+
+    /// <summary>
+    /// Sanitize version and return true if a correction has been applied
+    /// </summary>
+    /// <returns>True if one or more corrections has been applied, otherwise false</returns>
+    public bool SanitizeVersion()
+    {
+        // Sanitize Version
+        if (AvailableVersionsCount > 0)
+        {
+            var possibleVersions = GetAvailableVersionsForExtension(FileExtension);
+            if (possibleVersions.Length > 0)
+            {
+                if (!possibleVersions.Contains(Version)) // Version not found on possible versions, set to last
+                {
+                    Version = possibleVersions[^1];
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

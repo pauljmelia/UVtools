@@ -5,10 +5,11 @@ Set-Location $PSScriptRoot\..\..
 # Variables
 $package = "UVtools.Core"
 $nugetApiKeyFile = 'build/secret/nuget_api.key'
-$outputFolder = "$package/bin/Release"
+$githubApiKeyFile = 'build/secret/github_packages.key'
+$outputFolder = "artifacts/package/release"
 
-$projectXml = [Xml] (Get-Content "$package\$package.csproj")
-$version = "$($projectXml.Project.PropertyGroup.Version)".Trim();
+$projectXml = [Xml] (Get-Content "Directory.Build.props")
+$version = "$($projectXml.Project.PropertyGroup.UVtoolsVersion)".Trim();
 if([string]::IsNullOrWhiteSpace($version)){
     Write-Error "Can not detect the $package version, does $project\$project.csproj exists?"
     exit
@@ -24,7 +25,9 @@ if (Test-Path -Path $nugetApiKeyFile -PathType Leaf)
 
     if (Test-Path -Path $nupkg -PathType Leaf){
         $nugetApiKeyFile = (Get-Content $nugetApiKeyFile)
-        dotnet nuget push $nupkg --api-key $nugetApiKeyFile --source https://api.nuget.org/v3/index.json
+		$githubApiKeyFile = (Get-Content $githubApiKeyFile)
+        dotnet nuget push $nupkg --api-key $nugetApiKeyFile --source https://api.nuget.org/v3/index.json --skip-duplicate
+		dotnet nuget push $nupkg --api-key $githubApiKeyFile --source https://nuget.pkg.github.com/sn4k3/index.json --skip-duplicate
         #Remove-Item $nupkg
     }else {
         Write-Error "Nuget package publish failed!"

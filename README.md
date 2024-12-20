@@ -107,7 +107,7 @@ But also, I need victims for test subject. Proceed at your own risk!
 
 - SL1, SL1S (PrusaSlicer)
 - Photon, Photons, CBDDLP, CTB, PHZ, FDG, ZIP (Chitubox)
-- PWS, PW0, PWX, DLP, DL2P, PWMO, PWMA, PWMS, PWMX, PMX2, PWMB, PWSQ, PX6S, PM3, PM3N, PM3M, PM3R, PM5, PM5S, PWC (Photon Workshop)
+- PWS, PW0, PWX, DLP, DL2P, PWMO, PWMA, PWMS, PWMX, PMX2, PWMB, PWSQ, PX6S, PM3, PM3N, PM3M, PM4M, PM4U, PM3R, PM5, PM5S, PWC, PM7, PM7M, PWSZ (Photon Workshop)
 - JXS (GKone Slicer)
 - ZCode (UnizMaker)
 - ZCodex (Z-Suite)
@@ -117,6 +117,7 @@ But also, I need victims for test subject. Proceed at your own risk!
 - GR1 (GR1 Workshop)
 - CXDLP, CXDLPV4 (Creality Box)
 - GOO (Elegoo)
+- PRZ (Phrozen Sonic Mini 8K S)
 - LGS (Longer Orange 10), LGS30 (Longer Orange 30), LGS120 (Longer Orange 120), LGS4K (Longer Orange 4K & mono)
 - Flashforge SVGX
 - Anet N4, Anet N7
@@ -299,7 +300,7 @@ If you downloaded the **.AppImage** package variant you must set run permissions
 
 ## Mac
 
-1. macOS 10.15 Catalina or higher
+1. macOS 13 Monterey or higher
 1. 8GB RAM or higher + 512MB per CPU core
 3. Install UVtools via the [auto installer](https://github.com/sn4k3/UVtools#to-auto-install-on-macos)
 

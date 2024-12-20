@@ -75,7 +75,9 @@ public sealed class UserSettings : BindableBase
         private RangeObservableCollection<MappedProcess> _sendToProcess = new();
         private ushort _lockedFilesOpenCounter;
         private bool _fileSaveUpdateNameWithNewInformation = true;
-        
+        private decimal _availableRamLimit = 1M;
+        private RamLimitAction _availableRamOnHitLimitAction;
+
 
         public const byte LockedFilesMaxOpenCounter = 10;
 
@@ -131,6 +133,21 @@ public sealed class UserSettings : BindableBase
         {
             get => _loadLastRecentFileOnStartup;
             set => RaiseAndSetIfChanged(ref _loadLastRecentFileOnStartup, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the minimum amount of available RAM in GB to be able to run, otherwise will pause/cancel or exit.
+        /// </summary>
+        public decimal AvailableRamLimit
+        {
+            get => _availableRamLimit;
+            set => RaiseAndSetIfChanged(ref _availableRamLimit, Math.Max(0, value));
+        }
+
+        public RamLimitAction AvailableRamOnHitLimitAction
+        {
+            get => _availableRamOnHitLimitAction;
+            set => RaiseAndSetIfChanged(ref _availableRamOnHitLimitAction, value);
         }
 
         /// <summary>
@@ -1994,7 +2011,7 @@ public sealed class UserSettings : BindableBase
                                     };
                                     foreach (var slicerFile in FileFormat.AvailableFormats)
                                     {
-                                        if (slicerFile is not PhotonWorkshopFile) continue;
+                                        if (slicerFile is not AnycubicFile) continue;
                                         application.CompatibleExtensions += slicerFile.GetFileExtensions(string.Empty, ";");
                                     }
 

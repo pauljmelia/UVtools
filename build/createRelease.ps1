@@ -74,15 +74,16 @@ $stopWatch.Start()
 $software       = "UVtools"
 $project        = "UVtools.UI"
 $buildWith      = "Release"
-$netVersion     = "6.0"
+$netVersion     = "9.0"
 $publishFolder  = "publish"
 
 $rootPath           = Split-Path $PSScriptRoot -Parent
 $buildPath          = "$rootPath\build"
 $platformsPath      = "$buildPath\platforms"
-$publishPath        = "$rootPath\$publishFolder"
-$releasePath        = "$rootPath\$project\bin\$buildWith\net$netVersion"
-$objPath            = "$rootPath\$project\obj\$buildWith\net$netVersion"
+$artifactsPath      = "$rootPath\artifacts"
+$publishPath        = "$artifactsPath\$publishFolder"
+#$releasePath        = "$rootPath\artifacts\bin\$project\$buildWith\net$netVersion"
+#$objPath            = "$rootPath\artifacts\obj\$project\$buildWith\net$netVersion"
 $changelogFile      = "$rootPath\CHANGELOG.md"
 $releaseNotesFile   = "$rootPath\RELEASE_NOTES.md"
 
@@ -252,11 +253,11 @@ foreach ($obj in $runtimes.GetEnumerator()) {
         #New-Item "$publishCurrentPath\runtime_package.dat" -ItemType File -Value $runtime
         
         # Cleanup
-        Remove-Item "$rootPath\UVtools.Cmd\bin\$buildWith\net$netVersion\$runtime" -Recurse -ErrorAction Ignore
-        Remove-Item "$rootPath\UVtools.Cmd\obj\$buildWith\net$netVersion\$runtime" -Recurse -ErrorAction Ignore
+        #Remove-Item "$rootPath\UVtools.Cmd\bin\$buildWith\net$netVersion\$runtime" -Recurse -ErrorAction Ignore
+        #Remove-Item "$rootPath\UVtools.Cmd\obj\$buildWith\net$netVersion\$runtime" -Recurse -ErrorAction Ignore
 
-        Remove-Item "$releasePath\$runtime" -Recurse -ErrorAction Ignore
-        Remove-Item "$objPath\$runtime" -Recurse -ErrorAction Ignore
+        #Remove-Item "$releasePath\$runtime" -Recurse -ErrorAction Ignore
+        #Remove-Item "$objPath\$runtime" -Recurse -ErrorAction Ignore
         
         Write-Output "$publishCurrentPath"
         
@@ -368,6 +369,11 @@ if($null -ne $enableMSI -and $enableMSI)
         Write-Output ""
     }
 }
+
+# Cleanup
+Get-ChildItem -Force -Path "$artifactsPath" -Recurse -Directory | 
+  Where-Object { $_.name -match "^$($buildWith.ToLower())_.*-.*" } | 
+  Remove-Item -Force -Recurse #-Whatif
 
 
 Write-Output "
