@@ -325,7 +325,7 @@ public sealed class OperationCalibrateElephantFoot : Operation
         }
     }
 
-    public float DimmingStartBrightnessPercent => (float) Math.Round(_dimmingStartBrightness * 100 / 255M, 2);
+    public float DimmingStartBrightnessPercent => MathF.Round(_dimmingStartBrightness * 100 / 255.0f, 2);
 
     public byte DimmingEndBrightness
     {
@@ -339,7 +339,7 @@ public sealed class OperationCalibrateElephantFoot : Operation
         }
     }
 
-    public float DimmingEndBrightnessPercent => (float)Math.Round(_dimmingEndBrightness * 100 / 255M, 2);
+    public float DimmingEndBrightnessPercent => MathF.Round(_dimmingEndBrightness * 100 / 255.0f, 2);
 
     public byte DimmingBrightnessSteps
     {
@@ -474,10 +474,10 @@ public sealed class OperationCalibrateElephantFoot : Operation
         maxY += ellipseHeight;
         using Mat shape = EmguExtensions.InitMat(new Size(maxX + startX, maxY + startY));
         CvInvoke.FillPoly(shape, new VectorOfPoint(pointList.ToArray()), EmguExtensions.WhiteColor, lineType);
-        CvInvoke.Circle(shape, new Point(0, 0), length / 4, EmguExtensions.BlackColor, -1, lineType);
+        shape.DrawCircle(new Point(0, 0), SlicerFile.PixelsToNormalizedPitch(length / 4), EmguExtensions.BlackColor, -1, lineType);
         CvInvoke.Ellipse(shape, new Point(maxX / 2, maxY - ellipseHeight), new Size(maxX / 3, ellipseHeight), 0, 0, 360,
             EmguExtensions.WhiteColor, -1, lineType);
-        CvInvoke.Circle(shape, new Point(length / 2, (int) (maxY - 100 * _partScale)), length / 5, EmguExtensions.BlackColor, -1, lineType);
+        shape.DrawCircle(new Point(length / 2, (int) (maxY - 100 * _partScale)), SlicerFile.PixelsToNormalizedPitch(length / 5), EmguExtensions.BlackColor, -1, lineType);
 
         int currentX = 0;
         int currentY = 0;

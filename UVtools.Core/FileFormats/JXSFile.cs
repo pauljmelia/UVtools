@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,6 +21,7 @@ using UVtools.Core.Extensions;
 using UVtools.Core.GCode;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -76,7 +76,7 @@ public sealed class JXSFile : FileFormat
 
         [JsonPropertyName("used_material")] public float MaterialMl { get; set; }
 
-        [JsonPropertyName("action_list")] public List<object[]> Actions { get; set; } = new();
+        [JsonPropertyName("action_list")] public List<object[]> Actions { get; set; } = [];
     }
     #endregion
 
@@ -86,11 +86,13 @@ public sealed class JXSFile : FileFormat
 
     public override FileFormatType FileType => FileFormatType.Archive;
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(JXSFile), "jxs", "Uniformation GKone (JXS)")
-    };
+    ];
 
-    public override PrintParameterModifier[] PrintParameterModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterModifiers { get; } =
+    [
         PrintParameterModifier.BottomLayerCount,
         PrintParameterModifier.TransitionLayerCount,
 
@@ -125,10 +127,11 @@ public sealed class JXSFile : FileFormat
         PrintParameterModifier.RetractSpeed2,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } =
+    [
         PrintParameterModifier.PositionZ,
         PrintParameterModifier.WaitTimeBeforeCure,
         PrintParameterModifier.ExposureTime,
@@ -141,8 +144,8 @@ public sealed class JXSFile : FileFormat
         PrintParameterModifier.RetractSpeed,
         PrintParameterModifier.RetractHeight2,
         PrintParameterModifier.RetractSpeed2,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
     //public override Size[]? ThumbnailsOriginalSize { get; } = {new(640, 480)};
 
@@ -241,25 +244,25 @@ public sealed class JXSFile : FileFormat
     public override float BottomLiftHeight
     {
         get => ConfigFile.LiftHeight1;
-        set => base.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => ConfigFile.LiftHeight1;
-        set => base.LiftHeight = ConfigFile.LiftHeight1 = (float)Math.Round(value, 2);
+        set => base.LiftHeight = ConfigFile.LiftHeight1 = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => ConfigFile.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = ConfigFile.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = ConfigFile.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed
     {
         get => ConfigFile.LiftSpeed1;
-        set => base.LiftSpeed = ConfigFile.LiftSpeed1 = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = ConfigFile.LiftSpeed1 = MathF.Round(value, 2);
     }
 
     public override float PrintTime
@@ -282,7 +285,7 @@ public sealed class JXSFile : FileFormat
         }
     }
 
-    public override object[] Configs => new object[] { ConfigFile };
+    public override object[] Configs => [ConfigFile];
 
     #endregion
 
@@ -332,10 +335,9 @@ public sealed class JXSFile : FileFormat
 
             if (line.StartsWith(GCode!.CommandClearImage.Command))
             {
-                ControlFile.Actions.Add(new object[]
-                {
+                ControlFile.Actions.Add([
                     "slice", "<BLANK>"
-                });
+                ]);
                 continue;
             }
 
@@ -352,7 +354,7 @@ public sealed class JXSFile : FileFormat
             if (line.StartsWith(GCode.CommandShowImageM6054.Command))
             {
                 var match = Regex.Match(line, GCode.GetShowImageString(@"([0-9]+)"));
-                
+
                 if (!match.Success || match.Groups.Count <= 1)
                 {
                     throw new InvalidDataException($"Unable to parse layer index from: {line}");
@@ -365,14 +367,12 @@ public sealed class JXSFile : FileFormat
                 }
                 layerNumber++;
 
-                ControlFile.Actions.Add(new object[]
-                {
-                    "layerno", layerNumber,
-                });
-                ControlFile.Actions.Add(new object[]
-                {
+                ControlFile.Actions.Add([
+                    "layerno", layerNumber
+                ]);
+                ControlFile.Actions.Add([
                     "slice", $"{{PWD}}/{layerIndex}.png"
-                });
+                ]);
                 continue;
             }
 
@@ -393,10 +393,9 @@ public sealed class JXSFile : FileFormat
 
                 if(delay <= 0) continue;
 
-                ControlFile.Actions.Add(new object[]
-                {
+                ControlFile.Actions.Add([
                     "delay", delay
-                });
+                ]);
                 continue;
             }
 
@@ -404,11 +403,10 @@ public sealed class JXSFile : FileFormat
             {
                 lastG0 = line;
             }
-            
-            ControlFile.Actions.Add(new object[]
-            {
+
+            ControlFile.Actions.Add([
                 "gcode", line
-            });
+            ]);
         }
 
         ConfigFile.GcodeFooter = lastG0;
@@ -437,7 +435,7 @@ public sealed class JXSFile : FileFormat
                 {
                     if (!propertyInfo.CanWrite) continue;
                     var customAttributes = propertyInfo.GetCustomAttributes();
-                    if (customAttributes.Any(attribute =>
+                    if (customAttributes.AsValueEnumerable().Any(attribute =>
                         {
                             var type = attribute.GetType();
                             if (type == typeof(XmlIgnoreAttribute)) return true;
@@ -513,7 +511,7 @@ public sealed class JXSFile : FileFormat
                 case "slice":
                     if (value.StartsWith("{PWD}/"))
                     {
-                        GCode.AppendShowImageM6054(value.Remove(0, "{PWD}/".Length));
+                        GCode.AppendShowImageM6054(value["{PWD}/".Length..]);
                     }
                     else if (value == "<BLANK>")
                     {
@@ -562,7 +560,7 @@ public sealed class JXSFile : FileFormat
                 if (propertyInfo.Name.Equals("Item")) continue;
 
                 var customAttributes = propertyInfo.GetCustomAttributes();
-                if (customAttributes.Any(attribute =>
+                if (customAttributes.AsValueEnumerable().Any(attribute =>
                 {
                     var type = attribute.GetType();
                     if (type == typeof(XmlIgnoreAttribute)) return true;
@@ -588,7 +586,7 @@ public sealed class JXSFile : FileFormat
     protected override void PartialSaveInternally(OperationProgress progress)
     {
         using var outputFile = ZipFile.Open(TemporaryOutputFileFullPath, ZipArchiveMode.Update);
-        var entriesToRemove = outputFile.Entries.Where(zipEntry => zipEntry.Name.EndsWith(".ini") || zipEntry.Name.EndsWith(".json")).ToArray();
+        var entriesToRemove = outputFile.Entries.AsValueEnumerable().Where(zipEntry => zipEntry.Name.EndsWith(".ini") || zipEntry.Name.EndsWith(".json")).ToArray();
         foreach (var zipEntry in entriesToRemove)
         {
             zipEntry.Delete();
@@ -606,7 +604,7 @@ public sealed class JXSFile : FileFormat
                 if (propertyInfo.Name.Equals("Item")) continue;
 
                 var customAttributes = propertyInfo.GetCustomAttributes();
-                if (customAttributes.Any(attribute =>
+                if (customAttributes.AsValueEnumerable().Any(attribute =>
                     {
                         var type = attribute.GetType();
                         if (type == typeof(XmlIgnoreAttribute)) return true;

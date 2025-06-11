@@ -11,6 +11,7 @@ using Emgu.CV.CvEnum;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using UVtools.Core.Extensions;
@@ -21,7 +22,7 @@ namespace UVtools.Core.Excellon;
 /// <summary>
 /// <para>The Excellon drill format is a subset of RS274D and is used by the drilling and routing machines made by the Excellon corporation.
 /// Because of Excellon's long history and dominance of the PCB drilling business for many years their format is a defacto industry standard.</para>
-/// <para>Almost every PCB layout software can produce this format.However we have noticed that many PCB layout tools do not take
+/// <para>Almost every PCB layout software can produce this format. However we have noticed that many PCB layout tools do not take
 /// full advantage of the header information which makes reading the drill file more difficult than it should be.</para>
 /// <para>https://www.artwork.com/gerber/drl2laser/excellon/index.htm</para>
 /// <para>https://gist.github.com/katyo/5692b935abc085b1037e</para>
@@ -49,7 +50,7 @@ public class ExcellonDrillFormat
 
         public override string ToString()
         {
-            return $"T{Index}C{nameof(Diameter)}";
+            return $"T{Index}C{Diameter}";
         }
     }
 
@@ -103,7 +104,7 @@ public class ExcellonDrillFormat
 
     #region Constants
 
-    public static readonly string[] Extensions = {"drl", "xln"};
+    public static readonly string[] Extensions = ["drl", "xln"];
 
     /// <summary>
     /// Indicates the start of the header. should always be the first line in the header
@@ -130,7 +131,7 @@ public class ExcellonDrillFormat
 
     public Dictionary<uint, Tool> Tools { get; init; } = new();
 
-    public List<Drill> Drills { get; init; } = new();
+    public List<Drill> Drills { get; init; } = [];
 
     private SizeF XYppmm { get; set; }
 
@@ -188,6 +189,8 @@ public class ExcellonDrillFormat
         uint selectedToolIndex = 0;
 
         float x = 0, y = 0;
+        int integerDigits = 0;
+        int fractionDigits = 0;
 
         while ((line = tr.ReadLine()?.Trim()) is not null)
         {
@@ -224,6 +227,15 @@ public class ExcellonDrillFormat
                 continue;
             }
 
+            if (integerDigits == 0 && line.StartsWith(";FILE_FORMAT="))
+            {
+                line = line[13..];
+                var split = line.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (split.Length < 2) continue;
+                int.TryParse(split[0], out integerDigits);
+                int.TryParse(split[0], out fractionDigits);
+            }
+
             if (line is "ICI" or "ICI,ON")
             {
                 throw new NotImplementedException("ICI (Incremental input of program coordinates) is not yet implemented, please use absolute coordinate system.");
@@ -246,7 +258,7 @@ public class ExcellonDrillFormat
             {
                 if (!endOfHeader)
                 {
-                    var match = Regex.Match(line, @"^T([0-9]+)C(([0-9]*[.])?[0-9]+)");
+                    var match = Regex.Match(line, @"^T([0-9]+).*C(([0-9]*[.])?[0-9]+)");
                     if (match is
                         {
                             Success: true,
@@ -254,7 +266,7 @@ public class ExcellonDrillFormat
                         })
                     {
                         var index = uint.Parse(match.Groups[1].Value);
-                        var diameter = float.Parse(match.Groups[2].Value);
+                        var diameter = float.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
                         var tool = new Tool(index, diameter);
                         Tools.Add(index, tool);
                     }
@@ -280,22 +292,40 @@ public class ExcellonDrillFormat
                         Groups.Count: >= 2
                     })
                 {
-                    if (match.Groups[1].Value.Contains('.') || ZerosIncludeType == ExcellonDrillZerosIncludeType.None)
+                    if (match.Groups[1].Value.Contains('.'))
                     {
-                        x = float.Parse(match.Groups[1].Value);
+                        x = float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
                     else
                     {
                         switch (ZerosIncludeType)
                         {
+                            case ExcellonDrillZerosIncludeType.None:
                             case ExcellonDrillZerosIncludeType.Leading:
-                                x = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadRight(PaddingZeros, '0')));
+                                if (integerDigits > 0)
+                                {
+                                    var number = match.Groups[1].Value.Insert(integerDigits, ".");
+                                    x = float.Parse(number, CultureInfo.InvariantCulture);
+                                }
+                                else
+                                {
+                                    x = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadRight(PaddingZeros, '0'), CultureInfo.InvariantCulture));
+                                }
                                 break;
                             case ExcellonDrillZerosIncludeType.Trail:
-                                x = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadLeft(PaddingZeros, '0')));
+                                if (fractionDigits > 0)
+                                {
+                                    var number = match.Groups[1].Value.Insert(match.Groups[1].Value.Length - fractionDigits, ".");
+                                    x = float.Parse(number, CultureInfo.InvariantCulture);
+                                }
+                                else
+                                {
+                                    x = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadLeft(PaddingZeros, '0'), CultureInfo.InvariantCulture));
+                                }
                                 break;
                         }
                     }
+
                     
                 }
 
@@ -306,19 +336,36 @@ public class ExcellonDrillFormat
                         Groups.Count: >= 2
                     })
                 {
-                    if (match.Groups[1].Value.Contains('.') || ZerosIncludeType == ExcellonDrillZerosIncludeType.None)
+                    if (match.Groups[1].Value.Contains('.'))
                     {
-                        y = float.Parse(match.Groups[1].Value);
+                        y = float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
                     else
                     {
                         switch (ZerosIncludeType)
                         {
+                            case ExcellonDrillZerosIncludeType.None:
                             case ExcellonDrillZerosIncludeType.Leading:
-                                y = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadRight(PaddingZeros, '0')));
+                                if (integerDigits > 0)
+                                {
+                                    var number = match.Groups[1].Value.Insert(integerDigits, ".");
+                                    y = float.Parse(number, CultureInfo.InvariantCulture);
+                                }
+                                else
+                                {
+                                    y = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadRight(PaddingZeros, '0'), CultureInfo.InvariantCulture));
+                                }
                                 break;
                             case ExcellonDrillZerosIncludeType.Trail:
-                                y = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadLeft(PaddingZeros, '0')));
+                                if (fractionDigits > 0)
+                                {
+                                    var number = match.Groups[1].Value.Insert(match.Groups[1].Value.Length - fractionDigits, ".");
+                                    y = float.Parse(number, CultureInfo.InvariantCulture);
+                                }
+                                else
+                                {
+                                    y = ValueToCoordinate(float.Parse(match.Groups[1].Value.PadLeft(PaddingZeros, '0'), CultureInfo.InvariantCulture));
+                                }
                                 break;
                         }
                     }
@@ -336,8 +383,8 @@ public class ExcellonDrillFormat
     public float ValueToCoordinate(float value) =>
         UnitType switch
         {
-            ExcellonDrillUnitType.Millimeter => (float) Math.Round(value / MillimeterResolution, PaddingZeros),
-            ExcellonDrillUnitType.Inch => (float) Math.Round(value / InchResolution, PaddingZeros),
+            ExcellonDrillUnitType.Millimeter => MathF.Round(value / MillimeterResolution, PaddingZeros),
+            ExcellonDrillUnitType.Inch => MathF.Round(value / InchResolution, PaddingZeros),
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -374,6 +421,10 @@ public class ExcellonDrillFormat
 
     public int SizeMmToPx(float sizeMm)
         => (int)Math.Max(1, Math.Round(sizeMm * XYppmm.Max() * SizeScale, (MidpointRounding)SizeMidpointRounding));
+
+    public Size SizeMmToPx(float sizeMmX, float sizeMmY)
+        => new ((int)Math.Max(1, Math.Round(sizeMmX * XYppmm.Width * SizeScale, (MidpointRounding)SizeMidpointRounding)),
+            (int)Math.Max(1, Math.Round(sizeMmX * XYppmm.Height * SizeScale, (MidpointRounding)SizeMidpointRounding)));
     #endregion
 
     #region Static methods
@@ -383,9 +434,10 @@ public class ExcellonDrillFormat
 
         foreach (var drill in document.Drills)
         {
+            var radiusMillimeters = document.GetMillimeters(drill.Diameter / 2);
             var position = document.PositionMmToPx(document.GetMillimeters(drill.Position));
-            var radius = document.SizeMmToPx(document.GetMillimeters(drill.Diameter / 2));
-            CvInvoke.Circle(mat, position, radius,
+            var radius = document.SizeMmToPx(radiusMillimeters, radiusMillimeters);
+            mat.DrawCircle(position, radius,
                 document.InversePolarity ? EmguExtensions.WhiteColor : EmguExtensions.BlackColor,
                 -1, 
                 enableAntiAliasing ? LineType.AntiAlias : LineType.EightConnected);

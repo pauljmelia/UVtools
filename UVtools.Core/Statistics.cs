@@ -8,7 +8,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using ZLinq;
 
 namespace UVtools.Core;
 
@@ -16,8 +16,8 @@ public class Statistics
 {
     #region Properties
 
-    public List<string> ImplementedKeys { get; } = new();
-    public List<string> MissingKeys { get; } = new();
+    public List<string> ImplementedKeys { get; } = [];
+    public List<string> MissingKeys { get; } = [];
     public ushort TotalKeys => (ushort)(ImplementedKeys.Count + MissingKeys.Count);
 
     public Stopwatch ExecutionTime { get; } = new();
@@ -27,7 +27,7 @@ public class Statistics
     public override string ToString()
     {
         string message = $"{nameof(ImplementedKeys)}: {ImplementedKeys.Count}, {nameof(MissingKeys)}: {MissingKeys.Count}, {nameof(TotalKeys)}: {TotalKeys}, {nameof(ExecutionTime)}: {ExecutionTime.ElapsedMilliseconds}ms";
-        message = MissingKeys.Aggregate(message, (current, missingKey) => current + ("\n" + missingKey));
+        message = MissingKeys.AsValueEnumerable().Aggregate(message, (current, missingKey) => current + ("\n" + missingKey));
         return message;
     }
 

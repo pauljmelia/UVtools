@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
@@ -7,6 +7,7 @@ using UVtools.Core.Dialogs;
 using UVtools.Core.PixelEditor;
 using UVtools.UI.Extensions;
 using UVtools.UI.Structures;
+using ZLinq;
 
 namespace UVtools.UI.Controls.Fragments
 {
@@ -58,7 +59,7 @@ namespace UVtools.UI.Controls.Fragments
         {
             if (_source is null || _profiles is null) return;
 
-            if (_profiles.FirstOrDefault(operation => Equals(operation, _source)) is not null) return;
+            if (_profiles.AsValueEnumerable().FirstOrDefault(operation => Equals(operation, _source)) is not null) return;
 
             var clone = _source.Clone();
             _profiles.Add(clone);
@@ -66,7 +67,7 @@ namespace UVtools.UI.Controls.Fragments
             SelectedProfileIndex = _profiles.Count - 1;
         }
 
-        public async void DefaultSelectedProfile()
+        public async Task DefaultSelectedProfile()
         {
             if (_selectedProfileIndex <= -1 || _profiles is null) return;
 
@@ -81,7 +82,7 @@ namespace UVtools.UI.Controls.Fragments
             PixelEditorProfiles.Save();
         }
 
-        public async void RemoveSelectedProfile()
+        public async Task RemoveSelectedProfile()
         {
             if (_selectedProfileIndex <= -1 || _profiles is null) return;
 

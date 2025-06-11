@@ -35,7 +35,7 @@ public sealed class UserSettings : BindableBase
     #region Sub classes
 
     #region General
-    
+
     public sealed class GeneralUserSettings : BindableBase
     {
         private App.ApplicationTheme _theme = App.ApplicationTheme.FluentLight;
@@ -71,8 +71,8 @@ public sealed class UserSettings : BindableBase
         private int _notificationBeepRepeatFrequencyOffset = 50;
         private ushort _notificationBeepRepeatDelay;
         private bool _sendToPromptForRemovableDeviceEject = true;
-        private RangeObservableCollection<MappedDevice> _sendToCustomLocations = new();
-        private RangeObservableCollection<MappedProcess> _sendToProcess = new();
+        private RangeObservableCollection<MappedDevice> _sendToCustomLocations = [];
+        private RangeObservableCollection<MappedProcess> _sendToProcess = [];
         private ushort _lockedFilesOpenCounter;
         private bool _fileSaveUpdateNameWithNewInformation = true;
         private decimal _availableRamLimit = 1M;
@@ -340,7 +340,7 @@ public sealed class UserSettings : BindableBase
     #endregion
 
     #region Layer Preview
-    
+
     public sealed class LayerPreviewUserSettings : BindableBase
     {
         private Color _tooltipOverlayBackgroundColor = new(210, 226, 223, 215);
@@ -376,7 +376,7 @@ public sealed class UserSettings : BindableBase
         private bool _showLayerDifference = false;
         private bool _layerDifferenceHighlightSimilarityInstead = false;
         private bool _useIssueColorOnTracker = true;
-        private Color _islandColor = new(255, 255, 255, 0); 
+        private Color _islandColor = new(255, 255, 255, 0);
         private Color _islandHighlightColor = new(255, 255, 215, 0);
         private Color _overhangColor = new(255, 255, 105, 180);
         private Color _overhangHighlightColor = new(255, 255, 20, 147);
@@ -398,6 +398,8 @@ public sealed class UserSettings : BindableBase
         private bool _layerZoomToFitOnLoad = true;
         private bool _showBackgroudGrid;
         private ushort _layerSliderDebounce;
+        private bool _zoomPreferNative;
+        private ushort _zoomDebounceMilliseconds = 20;
 
 
         public Color TooltipOverlayBackgroundColor
@@ -900,6 +902,18 @@ public sealed class UserSettings : BindableBase
             set => CrosshairColor = new Color(value);
         }
 
+        public bool ZoomPreferNative
+        {
+            get => _zoomPreferNative;
+            set => RaiseAndSetIfChanged(ref _zoomPreferNative, value);
+        }
+
+        public ushort ZoomDebounceMilliseconds
+        {
+            get => _zoomDebounceMilliseconds;
+            set => RaiseAndSetIfChanged(ref _zoomDebounceMilliseconds, value);
+        }
+
         public bool ZoomToFitPrintVolumeBounds
         {
             get => _zoomToFitPrintVolumeBounds;
@@ -981,7 +995,7 @@ public sealed class UserSettings : BindableBase
     #endregion
 
     #region Issues
-    
+
     public sealed class IssuesUserSettings : BindableBase
     {
         public enum ComputeIssuesOnFileLoadType : byte
@@ -1144,7 +1158,7 @@ public sealed class UserSettings : BindableBase
             get => _islandRequiredPixelsToSupport;
             set => RaiseAndSetIfChanged(ref _islandRequiredPixelsToSupport, value);
         }
-            
+
         public byte IslandRequiredPixelBrightnessToProcessCheck
         {
             get => _islandRequiredPixelBrightnessToProcessCheck;
@@ -1168,7 +1182,7 @@ public sealed class UserSettings : BindableBase
             get => _overhangErodeIterations;
             set => RaiseAndSetIfChanged(ref _overhangErodeIterations, value);
         }
-            
+
         public byte ResinTrapBinaryThreshold
         {
             get => _resinTrapBinaryThreshold;
@@ -1284,7 +1298,7 @@ public sealed class UserSettings : BindableBase
     #endregion
 
     #region Pixel Editor
-    
+
     public sealed class PixelEditorUserSettings : BindableBase
     {
         private Color _addPixelColor = new(255, 144, 238, 144);
@@ -1472,7 +1486,7 @@ public sealed class UserSettings : BindableBase
     #endregion
 
     #region Layer Repair
-    
+
     public sealed class LayerRepairUserSettings : BindableBase
     {
         private bool _repairIslands = true;
@@ -1562,7 +1576,7 @@ public sealed class UserSettings : BindableBase
 
     #region Tools
 
-    
+
     public sealed class ToolsUserSettings : BindableBase
     {
         private bool _expandDescriptions = true;
@@ -1606,7 +1620,7 @@ public sealed class UserSettings : BindableBase
 
     #region Automations
 
-    
+
     public sealed class AutomationsUserSettings : BindableBase
     {
         private bool _saveFileAfterModifications = true;
@@ -1641,7 +1655,7 @@ public sealed class UserSettings : BindableBase
             get => _removeSourceFileAfterAutoConversion;
             set => RaiseAndSetIfChanged(ref _removeSourceFileAfterAutoConversion, value);
         }
-        
+
         public RemoveSourceFileAction RemoveSourceFileAfterManualConversion
         {
             get => _removeSourceFileAfterManualConversion;
@@ -1676,10 +1690,10 @@ public sealed class UserSettings : BindableBase
 
     #region Network
 
-    
+
     public sealed class NetworkUserSettings : BindableBase
     {
-        private RangeObservableCollection<RemotePrinter> _remotePrinters = new();
+        private RangeObservableCollection<RemotePrinter> _remotePrinters = [];
 
         public RangeObservableCollection<RemotePrinter> RemotePrinters
         {
@@ -1748,14 +1762,14 @@ public sealed class UserSettings : BindableBase
         set => _layerPreview = value;
     }
 
-        
+
     public IssuesUserSettings Issues
     {
         get => _issues ??= new IssuesUserSettings();
         set => _issues = value;
     }
 
-        
+
     public PixelEditorUserSettings PixelEditor
     {
         get => _pixelEditor ??= new PixelEditorUserSettings();
@@ -1889,9 +1903,8 @@ public sealed class UserSettings : BindableBase
             if (_instance.Network.RemotePrinters.Count == 0)
             {
                 _instance.Network.RemotePrinters.AddRange(
-                    new[]
-                    {
-                        new RemotePrinter("0.0.0.0", 8081, "Nova3D")
+                [
+                    new RemotePrinter("0.0.0.0", 8081, "Nova3D")
                         {
                             CompatibleExtensions = "cws",
                             RequestUploadFile  = new (RemotePrinterRequest.RequestType.UploadFile,  RemotePrinterRequest.RequestMethod.POST, "file/upload/{0}"),
@@ -1904,7 +1917,7 @@ public sealed class UserSettings : BindableBase
                             RequestPrintStatus = new (RemotePrinterRequest.RequestType.PrintStatus, RemotePrinterRequest.RequestMethod.GET, "job/list"),
                             RequestPrinterInfo = new (RemotePrinterRequest.RequestType.PrinterInfo, RemotePrinterRequest.RequestMethod.GET, "setting/printerInfo"),
                         },
-                        new RemotePrinter("0.0.0.0", 6000, "AnyCubic") 
+                        new RemotePrinter("0.0.0.0", 6000, "AnyCubic")
                         {
                             // https://github.com/rudetrooper/Octoprint-Chituboard/issues/4#issuecomment-961264287
                             // https://github.com/adamoutler/anycubic-python
@@ -1920,13 +1933,13 @@ public sealed class UserSettings : BindableBase
                             RequestPrintStatus = new (RemotePrinterRequest.RequestType.PrintStatus, RemotePrinterRequest.RequestMethod.TCP, "getstatus"),
                             RequestPrinterInfo = new (RemotePrinterRequest.RequestType.PrinterInfo, RemotePrinterRequest.RequestMethod.TCP, "sysinfo"),
                             // getmode
-                            // getwifi - displays the current wifi network name. 
+                            // getwifi - displays the current wifi network name.
                             // gethistory - gets the history and print settings of previous prints.
                             // delhistory - deletes printing history.
                             // getPreview1 - returns a list of dimensions used for the print.
                             // getPreview2 - returns a binary preview image of the print.
-                        },
-                        /*new RemotePrinter("0.0.0.0", 40454, "Creality Halot")
+                        }
+                    /*new RemotePrinter("0.0.0.0", 40454, "Creality Halot")
                         {
                             CompatibleExtensions = "cxdlp",
                             RequestUploadFile  = new (RemotePrinterRequest.RequestType.UploadFile,  RemotePrinterRequest.RequestMethod.POST, "{0}"),
@@ -1939,7 +1952,7 @@ public sealed class UserSettings : BindableBase
                             //RequestPrintStatus = new (RemotePrinterRequest.RequestType.PrintStatus, RemotePrinterRequest.RequestMethod.GET, "job/list"),
                             //RequestPrinterInfo = new (RemotePrinterRequest.RequestType.PrinterInfo, RemotePrinterRequest.RequestMethod.GET, "setting/printerInfo"),
                         }*/
-                    });
+                ]);
             }
 
             if (_instance.General.SendToProcess.Count == 0)
@@ -1954,7 +1967,7 @@ public sealed class UserSettings : BindableBase
                     {
                         findDirectories.Add(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86));
                     }
-                        
+
                     foreach (var path in findDirectories)
                     {
                         var directories = Directory.GetDirectories(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
@@ -1974,7 +1987,7 @@ public sealed class UserSettings : BindableBase
 
                                     _instance.General.SendToApplications.Add(application);
                                 }
-                                
+
                                 continue;
                             }*/
 
@@ -2015,7 +2028,7 @@ public sealed class UserSettings : BindableBase
                                         application.CompatibleExtensions += slicerFile.GetFileExtensions(string.Empty, ";");
                                     }
 
-                                        
+
                                     _instance.General.SendToProcess.Add(application);
                                 }
                                 continue;
@@ -2054,7 +2067,7 @@ public sealed class UserSettings : BindableBase
                                 {
                                     var application = new MappedProcess(executable, "Open archive: WinRAR")
                                     {
-                                        CompatibleExtensions = "zip;sl1;sl1s;cws;zcode;zcodex;jxs;nanodlp;vdt;uvj"
+                                        CompatibleExtensions = "zip;sl1;sl1s;cws;zcode;zcodex;jxs;nanodlp;vdt;uvj;pm7;pm7m;pm4u;pwsz"
                                     };
                                     _instance.General.SendToProcess.Add(application);
                                 }
@@ -2069,7 +2082,7 @@ public sealed class UserSettings : BindableBase
                                 {
                                     var application = new MappedProcess(executable, "Open archive: 7-Zip")
                                     {
-                                        CompatibleExtensions = "zip;sl1;sl1s;cws;zcode;zcodex;vdt;uvj"
+                                        CompatibleExtensions = "zip;sl1;sl1s;cws;zcode;zcodex;jxs;nanodlp;vdt;uvj;pm7;pm7m;pm4u;pwsz"
                                     };
                                     _instance.General.SendToProcess.Add(application);
                                 }
@@ -2164,17 +2177,16 @@ public sealed class UserSettings : BindableBase
         Instance.AppVersion = About.VersionString;
     }
 
-    public static object[] PackObjects => 
-        new object[]
-        {
-            Instance.General,
+    public static object[] PackObjects =>
+    [
+        Instance.General,
             Instance.LayerPreview,
             Instance.Issues,
             Instance.PixelEditor,
             Instance.LayerRepair,
             Instance.Automations,
             Instance.Network
-        };
+    ];
     #endregion
 
     #region Methods

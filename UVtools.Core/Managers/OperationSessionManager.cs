@@ -8,8 +8,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.Managers;
 
@@ -23,7 +23,7 @@ public class OperationSessionManager : IList<Operation>
     #region Singleton
 
     private static readonly Lazy<OperationSessionManager> _instanceHolder =
-        new(() => new OperationSessionManager());
+        new(() => []);
 
     public static OperationSessionManager Instance => _instanceHolder.Value;
 
@@ -31,7 +31,7 @@ public class OperationSessionManager : IList<Operation>
 
     #region Members
 
-    private readonly List<Operation> _operations = new();
+    private readonly List<Operation> _operations = [];
 
     #endregion
 
@@ -45,7 +45,7 @@ public class OperationSessionManager : IList<Operation>
 
     public Operation? Find(Type type)
     {
-        return this.FirstOrDefault(operation => operation.GetType() == type);
+        return this.AsValueEnumerable().FirstOrDefault(operation => operation.GetType() == type);
     }
 
     public Operation? Find(Operation fromOperation) => Find(fromOperation.GetType());

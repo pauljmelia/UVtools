@@ -5,6 +5,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using UVtools.Core.Extensions;
 using UVtools.Core.Operations;
 using UVtools.UI.Extensions;
@@ -89,7 +90,7 @@ public partial class ToolMaskControl : ToolControl
         }
     }
 
-    public async void ImportImageMask()
+    public async Task ImportImageMask()
     {
         var files = await App.MainWindow.OpenFilePickerAsync(AvaloniaStatic.ImagesFileFilter);
         if (files.Count == 0 || files[0].TryGetLocalPath() is not { } filePath) return;
@@ -131,7 +132,7 @@ public partial class ToolMaskControl : ToolControl
         for (decimal i = 1; i < radius; i++)
         {
             int color = (int)(_genMinimumBrightness - i / radius * colorDifference); //or some another color calculation
-            CvInvoke.Circle(Operation.Mask, center, (int)i, new MCvScalar(color), 2);
+            Operation.Mask.DrawCircle(center, SlicerFile!.PixelsToNormalizedPitch((int)i), new MCvScalar(color), 2);
         }
 
         if (_isMaskInverted) Operation.InvertMask();

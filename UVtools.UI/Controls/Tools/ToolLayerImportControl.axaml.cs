@@ -3,11 +3,13 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UVtools.Core.FileFormats;
 using UVtools.Core.Objects;
 using UVtools.Core.Operations;
 using UVtools.Core.SystemOS;
 using UVtools.UI.Windows;
+using ZLinq;
 
 namespace UVtools.UI.Controls.Tools;
 
@@ -29,7 +31,7 @@ public partial class ToolLayerImportControl : ToolControl
         set => RaiseAndSetIfChanged(ref _isAutoSortLayersByFileNameChecked, value);
     }
 
-    public string? InfoImportResult 
+    public string? InfoImportResult
     {
         get
         {
@@ -49,7 +51,7 @@ public partial class ToolLayerImportControl : ToolControl
                 $"{Operation.Files.Count} files will be imported into model starting from layer {Operation.StartLayerIndex} {InfoLayerHeightString}.";
             //$"Model will {textFactor} from layers {App.SlicerFile.LayerCount} ({App.SlicerFile.TotalHeight}mm) to {modelTotalLayers} ({App.SlicerFile.GetHeightFromLayer(modelTotalLayers, false)}mm)";
         }
-            
+
     }
 
     public GenericFileRepresentation? SelectedFile
@@ -63,7 +65,7 @@ public partial class ToolLayerImportControl : ToolControl
                 PreviewImage = null;
                 return;
             }
-            if (!OperationLayerImport.ValidImageExtensions.Any(extension => _selectedFile.IsExtension(extension))) return;
+            if (!OperationLayerImport.ValidImageExtensions.AsValueEnumerable().Any(extension => _selectedFile.IsExtension(extension))) return;
             PreviewImage = new Bitmap(_selectedFile.FilePath);
         }
     }
@@ -154,7 +156,7 @@ public partial class ToolLayerImportControl : ToolControl
         Operation.StartLayerIndex = App.MainWindow.ActualLayer;
     }
 
-    public async void AddFiles()
+    public async Task AddFiles()
     {
         var filters = AvaloniaStatic.ToAvaloniaFileFilter(FileFormat.AllFileFiltersAvalonia);
         var orderedFilters = new List<FilePickerFileType> { filters[UserSettings.Instance.General.DefaultOpenFileExtensionIndex] };
@@ -166,7 +168,7 @@ public partial class ToolLayerImportControl : ToolControl
 
         var files = await App.MainWindow.OpenFilePickerAsync(UserSettings.Instance.General.DefaultDirectoryOpenFile, orderedFilters, allowMultiple: true);
         if (files.Count == 0) return;
-        
+
         foreach (var filename in files)
         {
             Operation.AddFile(filename.TryGetLocalPath()!);

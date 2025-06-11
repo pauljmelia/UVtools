@@ -5,12 +5,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using UVtools.Core.Exceptions;
 using UVtools.Core.Extensions;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -21,12 +21,13 @@ public sealed class GooFile : FileFormat
 
     private const string FileVersion = "V3.0";
 
-    private static readonly byte[] FileMagic = {
+    private static readonly byte[] FileMagic =
+    [
         0x07, 0x00, 0x00, 0x00,
         0x44, 0x4C, 0x50, 0x00
-    };
+    ];
 
-    private static byte[] Delimiter => new byte[]{ 0x0D, 0x0A };
+    private static byte[] Delimiter => [0x0D, 0x0A];
 
     private static byte LayerMagic => 0x55;
 
@@ -62,9 +63,9 @@ public sealed class GooFile : FileFormat
         [FieldEndianness(Endianness.Big)] [FieldOrder(8)] public ushort AntiAliasingLevel { get; set; } = 8;
         [FieldEndianness(Endianness.Big)] [FieldOrder(9)] public ushort GreyLevel { get; set; } = 1;
         [FieldEndianness(Endianness.Big)] [FieldOrder(10)] public ushort BlurLevel { get; set; } = 0;
-        [FieldOrder(11)] [FieldCount(116 * 116 * 2)] public byte[] SmallPreview565 { get; set; } = Array.Empty<byte>();
+        [FieldOrder(11)] [FieldCount(116 * 116 * 2)] public byte[] SmallPreview565 { get; set; } = [];
         [FieldOrder(12)] [FieldCount(2)] public byte[] SmallPreviewDelimiter { get; set; } = Delimiter;
-        [FieldOrder(13)] [FieldCount(290 * 290 * 2)] public byte[] BigPreview565 { get; set; } = Array.Empty<byte>();
+        [FieldOrder(13)] [FieldCount(290 * 290 * 2)] public byte[] BigPreview565 { get; set; } = [];
         [FieldOrder(14)] [FieldCount(2)] public byte[] BigPreviewDelimiter { get; set; } = Delimiter;
         [FieldEndianness(Endianness.Big)] [FieldOrder(15)] public uint LayerCount { get; set; }
         [FieldEndianness(Endianness.Big)] [FieldOrder(16)] public ushort ResolutionX { get; set; }
@@ -166,7 +167,7 @@ public sealed class GooFile : FileFormat
 
         [Ignore] public GooFile? Parent { get; set; }
 
-        [Ignore] public byte[] EncodedRle { get; set; } = Array.Empty<byte>();
+        [Ignore] public byte[] EncodedRle { get; set; } = [];
 
         // DelimiterRLE
 
@@ -273,7 +274,7 @@ public sealed class GooFile : FileFormat
                     /* When byte0[7:6] is [1:0], the meaning of byte0[5:4] follow below definition:
                      * 0 0 byte0[3:0] is the positive diff value. that's mean
                            current value subtract previous value is bigger
-                           than 0. The range is from 0 to 15. 0x0 map to 0. 
+                           than 0. The range is from 0 to 15. 0x0 map to 0.
                            0xf map to 15.
                      * 0 1 byte0[3:0] is the positive diff value. And this
                            value's run-length represent by byte1[7:0]
@@ -361,7 +362,7 @@ public sealed class GooFile : FileFormat
 
         public byte[] EncodeImage(Mat image, uint layerIndex, bool useColorDifferenceCompression = true)
         {
-            List<byte> rle = new(){ LayerMagic };
+            List<byte> rle = [LayerMagic];
             byte previousColor = 0;
             byte currentColor = 0;
             uint stride = 0;
@@ -388,7 +389,7 @@ public sealed class GooFile : FileFormat
                         rle[firstByteIndex] |= 0x1 << 4;
                         rle.Add((byte)stride);
                     }
-                    
+
                     if (currentColor < previousColor)
                     {
                         rle[firstByteIndex] |= 0x1 << 5;
@@ -504,16 +505,17 @@ public sealed class GooFile : FileFormat
     #region Properties
     public override FileFormatType FileType => FileFormatType.Binary;
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(GooFile), "goo", "Elegoo GOO"),
-        new(typeof(GooFile), "prz", "Phrozen Sonic Mini 8K S (PRZ)"),
-    };
+        new(typeof(GooFile), "prz", "Phrozen Sonic Mini 8K S (PRZ)")
+    ];
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
+    [
         new(116, 116),
         new(290, 290)
-    };
+    ];
 
     public FileHeader Header { get; private set; } = new();
 
@@ -521,61 +523,126 @@ public sealed class GooFile : FileFormat
 
     public FileFooter Footer { get; private set; } = new();
 
-    public override PrintParameterModifier[] PrintParameterModifiers { get; } = {
-        PrintParameterModifier.BottomLayerCount,
-        PrintParameterModifier.TransitionLayerCount,
+    public override PrintParameterModifier[] PrintParameterModifiers
+    {
+        get
+        {
+            if (HaveTiltingVat)
+            {
+                return
+                [
+                    PrintParameterModifier.BottomLayerCount,
+                    PrintParameterModifier.TransitionLayerCount,
 
-        //PrintParameterModifier.BottomLightOffDelay,
-        PrintParameterModifier.LightOffDelay,
+                    //PrintParameterModifier.BottomLightOffDelay,
+                    PrintParameterModifier.LightOffDelay,
 
-        PrintParameterModifier.BottomWaitTimeBeforeCure,
-        PrintParameterModifier.WaitTimeBeforeCure,
+                    PrintParameterModifier.BottomWaitTimeBeforeCure,
+                    PrintParameterModifier.WaitTimeBeforeCure,
 
-        PrintParameterModifier.BottomExposureTime,
-        PrintParameterModifier.ExposureTime,
+                    PrintParameterModifier.BottomExposureTime,
+                    PrintParameterModifier.ExposureTime,
 
-        PrintParameterModifier.BottomWaitTimeAfterCure,
-        PrintParameterModifier.WaitTimeAfterCure,
+                    PrintParameterModifier.BottomWaitTimeAfterCure,
+                    PrintParameterModifier.WaitTimeAfterCure,
 
-        PrintParameterModifier.BottomLiftHeight,
-        PrintParameterModifier.BottomLiftSpeed,
-        PrintParameterModifier.LiftHeight,
-        PrintParameterModifier.LiftSpeed,
-        PrintParameterModifier.BottomLiftHeight2,
-        PrintParameterModifier.BottomLiftSpeed2,
-        PrintParameterModifier.LiftHeight2,
-        PrintParameterModifier.LiftSpeed2,
+                    PrintParameterModifier.BottomWaitTimeAfterLift,
+                    PrintParameterModifier.WaitTimeAfterLift,
 
-        PrintParameterModifier.BottomWaitTimeAfterLift,
-        PrintParameterModifier.WaitTimeAfterLift,
+                    PrintParameterModifier.BottomLightPWM,
+                    PrintParameterModifier.LightPWM
+                ];
+            }
 
-        PrintParameterModifier.BottomRetractSpeed,
-        PrintParameterModifier.RetractSpeed,
-        PrintParameterModifier.BottomRetractHeight2,
-        PrintParameterModifier.BottomRetractSpeed2,
-        PrintParameterModifier.RetractHeight2,
-        PrintParameterModifier.RetractSpeed2,
+            return
+            [
+                PrintParameterModifier.BottomLayerCount,
+                PrintParameterModifier.TransitionLayerCount,
 
-        PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM
-    };
-        
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
-        PrintParameterModifier.PositionZ,
-        PrintParameterModifier.LightOffDelay,
-        PrintParameterModifier.WaitTimeBeforeCure,
-        PrintParameterModifier.ExposureTime,
-        PrintParameterModifier.WaitTimeAfterCure,
-        PrintParameterModifier.LiftHeight,
-        PrintParameterModifier.LiftSpeed,
-        PrintParameterModifier.LiftHeight2,
-        PrintParameterModifier.LiftSpeed2,
-        PrintParameterModifier.WaitTimeAfterLift,
-        PrintParameterModifier.RetractSpeed,
-        PrintParameterModifier.RetractHeight2,
-        PrintParameterModifier.RetractSpeed2,
-        PrintParameterModifier.LightPWM
-    };
+                //PrintParameterModifier.BottomLightOffDelay,
+                PrintParameterModifier.LightOffDelay,
+
+                PrintParameterModifier.BottomWaitTimeBeforeCure,
+                PrintParameterModifier.WaitTimeBeforeCure,
+
+                PrintParameterModifier.BottomExposureTime,
+                PrintParameterModifier.ExposureTime,
+
+                PrintParameterModifier.BottomWaitTimeAfterCure,
+                PrintParameterModifier.WaitTimeAfterCure,
+
+                PrintParameterModifier.BottomLiftHeight,
+                PrintParameterModifier.BottomLiftSpeed,
+                PrintParameterModifier.LiftHeight,
+                PrintParameterModifier.LiftSpeed,
+                PrintParameterModifier.BottomLiftHeight2,
+                PrintParameterModifier.BottomLiftSpeed2,
+                PrintParameterModifier.LiftHeight2,
+                PrintParameterModifier.LiftSpeed2,
+
+                PrintParameterModifier.BottomWaitTimeAfterLift,
+                PrintParameterModifier.WaitTimeAfterLift,
+
+                PrintParameterModifier.BottomRetractSpeed,
+                PrintParameterModifier.RetractSpeed,
+                PrintParameterModifier.BottomRetractHeight2,
+                PrintParameterModifier.BottomRetractSpeed2,
+                PrintParameterModifier.RetractHeight2,
+                PrintParameterModifier.RetractSpeed2,
+
+                PrintParameterModifier.BottomLightPWM,
+                PrintParameterModifier.LightPWM
+            ];
+        }
+    }
+
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers
+    {
+        get
+        {
+            if (HaveTiltingVat)
+            {
+                return
+                [
+                    PrintParameterModifier.PositionZ,
+                    PrintParameterModifier.LightOffDelay,
+                    PrintParameterModifier.WaitTimeBeforeCure,
+                    PrintParameterModifier.ExposureTime,
+                    PrintParameterModifier.WaitTimeAfterCure,
+                    PrintParameterModifier.WaitTimeAfterLift,
+                    PrintParameterModifier.LightPWM
+                ];
+            }
+
+            return
+            [
+                PrintParameterModifier.PositionZ,
+                PrintParameterModifier.LightOffDelay,
+                PrintParameterModifier.WaitTimeBeforeCure,
+                PrintParameterModifier.ExposureTime,
+                PrintParameterModifier.WaitTimeAfterCure,
+                PrintParameterModifier.LiftHeight,
+                PrintParameterModifier.LiftSpeed,
+                PrintParameterModifier.LiftHeight2,
+                PrintParameterModifier.LiftSpeed2,
+                PrintParameterModifier.WaitTimeAfterLift,
+                PrintParameterModifier.RetractSpeed,
+                PrintParameterModifier.RetractHeight2,
+                PrintParameterModifier.RetractSpeed2,
+                PrintParameterModifier.LightPWM
+            ];
+        }
+    }
+
+    public override bool HaveTiltingVat
+    {
+        get
+        {
+            if (MachineName.Contains("Saturn 4 Ultra", StringComparison.OrdinalIgnoreCase)) return true;
+            if (MachineName.Contains("Mars 5 Ultra", StringComparison.OrdinalIgnoreCase)) return true;
+            return LiftHeight == 0;
+        }
+    }
 
     public override uint ResolutionX
     {
@@ -610,7 +677,7 @@ public sealed class GooFile : FileFormat
     public override float MachineZ
     {
         get => Header.MachineZ > 0 ? Header.MachineZ : base.MachineZ;
-        set => base.MachineZ = Header.MachineZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = Header.MachineZ = MathF.Round(value, 2);
     }
 
     public override FlipDirection DisplayMirror
@@ -682,7 +749,7 @@ public sealed class GooFile : FileFormat
         get => Header.LightOffDelay;
         set
         {
-            base.LightOffDelay = Header.LightOffDelay = (float)Math.Round(value, 2);
+            base.LightOffDelay = Header.LightOffDelay = MathF.Round(value, 2);
             if (value > 0)
             {
                 Header.DelayMode = DelayModes.LightOff;
@@ -706,7 +773,7 @@ public sealed class GooFile : FileFormat
         get => Header.WaitTimeBeforeCure;
         set
         {
-            base.WaitTimeBeforeCure = Header.WaitTimeBeforeCure = Header.WaitTimeBeforeCure = (float)Math.Round(value, 2);
+            base.WaitTimeBeforeCure = Header.WaitTimeBeforeCure = Header.WaitTimeBeforeCure = MathF.Round(value, 2);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -719,7 +786,7 @@ public sealed class GooFile : FileFormat
     public override float BottomExposureTime
     {
         get => Header.BottomExposureTime;
-        set => base.BottomExposureTime = Header.BottomExposureTime = (float)Math.Round(value, 2);
+        set => base.BottomExposureTime = Header.BottomExposureTime = MathF.Round(value, 2);
     }
 
     public override float BottomWaitTimeAfterCure
@@ -737,7 +804,7 @@ public sealed class GooFile : FileFormat
         get => Header.WaitTimeAfterCure;
         set
         {
-            base.WaitTimeAfterCure = Header.WaitTimeAfterCure = (float)Math.Round(value, 2);
+            base.WaitTimeAfterCure = Header.WaitTimeAfterCure = MathF.Round(value, 2);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -750,55 +817,55 @@ public sealed class GooFile : FileFormat
     public override float ExposureTime
     {
         get => Header.ExposureTime;
-        set => base.ExposureTime = Header.ExposureTime = (float)Math.Round(value, 2);
+        set => base.ExposureTime = Header.ExposureTime = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight
     {
         get => Header.BottomLiftHeight;
-        set => base.BottomLiftHeight = Header.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = Header.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => Header.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = Header.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = Header.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => Header.LiftHeight;
-        set => base.LiftHeight = Header.LiftHeight = (float)Math.Round(value, 2);
+        set => base.LiftHeight = Header.LiftHeight = MathF.Round(value, 2);
     }
-        
+
     public override float LiftSpeed
     {
         get => Header.LiftSpeed;
-        set => base.LiftSpeed = Header.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = Header.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight2
     {
         get => Header.BottomLiftHeight2;
-        set => base.BottomLiftHeight2 = Header.BottomLiftHeight2 = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight2 = Header.BottomLiftHeight2 = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed2
     {
         get => Header.BottomLiftSpeed2;
-        set => base.BottomLiftSpeed2 = Header.BottomLiftSpeed2 = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed2 = Header.BottomLiftSpeed2 = MathF.Round(value, 2);
     }
 
     public override float LiftHeight2
     {
         get => Header.LiftHeight2;
-        set => base.LiftHeight2 = Header.LiftHeight2 = (float)Math.Round(value, 2);
+        set => base.LiftHeight2 = Header.LiftHeight2 = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed2
     {
         get => Header.LiftSpeed2;
-        set => base.LiftSpeed2 = Header.LiftSpeed2 = (float)Math.Round(value, 2);
+        set => base.LiftSpeed2 = Header.LiftSpeed2 = MathF.Round(value, 2);
     }
 
     public override float BottomWaitTimeAfterLift
@@ -816,7 +883,7 @@ public sealed class GooFile : FileFormat
         get => Header.WaitTimeAfterLift;
         set
         {
-            base.WaitTimeAfterLift = Header.WaitTimeAfterLift = Header.WaitTimeAfterLift = (float)Math.Round(value, 2);
+            base.WaitTimeAfterLift = Header.WaitTimeAfterLift = Header.WaitTimeAfterLift = MathF.Round(value, 2);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -829,13 +896,13 @@ public sealed class GooFile : FileFormat
     public override float BottomRetractSpeed
     {
         get => Header.BottomRetractSpeed;
-        set => base.BottomRetractSpeed = Header.BottomRetractSpeed = (float)Math.Round(value, 2);
+        set => base.BottomRetractSpeed = Header.BottomRetractSpeed = MathF.Round(value, 2);
     }
 
     public override float RetractSpeed
     {
         get => Header.RetractSpeed;
-        set => base.RetractSpeed = Header.RetractSpeed = (float)Math.Round(value, 2);
+        set => base.RetractSpeed = Header.RetractSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomRetractHeight2
@@ -843,7 +910,7 @@ public sealed class GooFile : FileFormat
         get => Header.BottomRetractHeight2;
         set
         {
-            value = Math.Clamp((float)Math.Round(value, 2), 0, BottomRetractHeightTotal);
+            value = Math.Clamp(MathF.Round(value, 2), 0, BottomRetractHeightTotal);
             base.BottomRetractHeight2 = Header.BottomRetractHeight2 = value;
             Header.BottomRetractHeight = BottomRetractHeight;
         }
@@ -852,7 +919,7 @@ public sealed class GooFile : FileFormat
     public override float BottomRetractSpeed2
     {
         get => Header.BottomRetractSpeed2;
-        set => base.BottomRetractSpeed2 = Header.BottomRetractSpeed2 = (float)Math.Round(value, 2);
+        set => base.BottomRetractSpeed2 = Header.BottomRetractSpeed2 = MathF.Round(value, 2);
     }
 
     public override float RetractHeight2
@@ -860,7 +927,7 @@ public sealed class GooFile : FileFormat
         get => Header.RetractHeight2;
         set
         {
-            value = Math.Clamp((float)Math.Round(value, 2), 0, RetractHeightTotal);
+            value = Math.Clamp(MathF.Round(value, 2), 0, RetractHeightTotal);
             base.RetractHeight2 = Header.RetractHeight2 = value;
             Header.RetractHeight = RetractHeight;
         }
@@ -869,7 +936,7 @@ public sealed class GooFile : FileFormat
     public override float RetractSpeed2
     {
         get => Header.RetractSpeed2;
-        set => base.RetractSpeed2 = Header.RetractSpeed2 = (float)Math.Round(value, 2);
+        set => base.RetractSpeed2 = Header.RetractSpeed2 = MathF.Round(value, 2);
     }
 
     public override byte BottomLightPWM
@@ -903,16 +970,16 @@ public sealed class GooFile : FileFormat
     public override float MaterialGrams
     {
         get => Header.MaterialGrams;
-        set => base.MaterialGrams = Header.MaterialGrams = (float)Math.Round(value, 3);
+        set => base.MaterialGrams = Header.MaterialGrams = MathF.Round(value, 3);
     }
 
     public override float MaterialCost
     {
-        get => (float)Math.Round(Header.MaterialCost, 3);
-        set => base.MaterialCost = Header.MaterialCost = (float)Math.Round(value, 3);
+        get => MathF.Round(Header.MaterialCost, 3);
+        set => base.MaterialCost = Header.MaterialCost = MathF.Round(value, 3);
     }
 
-    public override object[] Configs => new object[] { Header, Footer };
+    public override object[] Configs => [Header, Footer];
 
     #endregion
 
@@ -932,7 +999,7 @@ public sealed class GooFile : FileFormat
 
         var expectedMagic = FileMagic;
 
-        if (!Header.Magic.SequenceEqual(expectedMagic))
+        if (!Header.Magic.AsValueEnumerable().SequenceEqual(expectedMagic))
         {
             throw new FileLoadException("Not a valid GOO file! Magic value mismatch", FileFullPath);
         }
@@ -976,7 +1043,7 @@ public sealed class GooFile : FileFormat
                 Parallel.ForEach(batch, CoreSettings.GetParallelOptions(progress), layerIndex =>
                 {
                     progress.PauseIfRequested();
-                    
+
                     using (var mat = LayersDefinition[layerIndex].DecodeImage((uint)layerIndex))
                     {
                         _layers[layerIndex] = new Layer((uint)layerIndex, mat, this);
@@ -989,7 +1056,7 @@ public sealed class GooFile : FileFormat
 
         Footer = Helpers.Deserialize<FileFooter>(inputFile);
         Debug.WriteLine($"Footer: {Footer}");
-        if (!Footer.Magic.SequenceEqual(expectedMagic))
+        if (!Footer.Magic.AsValueEnumerable().SequenceEqual(expectedMagic))
         {
             throw new FileLoadException("Not a valid GOO file! Footer magic value mismatch", FileFullPath);
         }
@@ -1002,9 +1069,10 @@ public sealed class GooFile : FileFormat
         // Fixes virtual bottom properties
         SuppressRebuildPropertiesWork(() =>
         {
-            base.BottomWaitTimeBeforeCure = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeBeforeCure ?? 0;
-            base.BottomWaitTimeAfterCure = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterCure ?? 0;
-            base.BottomWaitTimeAfterLift = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterLift ?? 0;
+            var enumerable = this.AsValueEnumerable();
+            base.BottomWaitTimeBeforeCure = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeBeforeCure ?? 0;
+            base.BottomWaitTimeAfterCure = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterCure ?? 0;
+            base.BottomWaitTimeAfterLift = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterLift ?? 0;
         });
     }
 
@@ -1013,6 +1081,28 @@ public sealed class GooFile : FileFormat
         Header.PerLayerSettings = UsingPerLayerSettings;
         Header.Volume = Volume;
         Header.MaterialGrams = MaterialMilliliters;
+
+        if (HaveTiltingVat)
+        {
+            const float lift = 0;
+            const float speed = 0;
+
+            BottomLiftHeight = lift;
+            BottomLiftHeight2 = lift;
+            BottomLiftSpeed = speed;
+            BottomLiftSpeed2 = speed;
+            BottomRetractHeight2 = lift;
+            BottomRetractSpeed = speed;
+            BottomRetractSpeed2 = speed;
+
+            LiftHeight = lift;
+            LiftHeight2 = lift;
+            LiftSpeed = speed;
+            LiftSpeed2 = speed;
+            RetractHeight2 = lift;
+            RetractSpeed = speed;
+            RetractSpeed2 = speed;
+        }
     }
 
     protected override void EncodeInternally(OperationProgress progress)
@@ -1021,7 +1111,7 @@ public sealed class GooFile : FileFormat
 
         progress.Reset(OperationProgress.StatusEncodePreviews, 2);
 
-        Mat?[] thumbnails = { GetLargestThumbnail(), GetSmallestThumbnail() };
+        Mat?[] thumbnails = [GetLargestThumbnail(), GetSmallestThumbnail()];
         Header.BigPreview565 = EncodeImage(DATATYPE_RGB565_BE, thumbnails[0]!);
         progress++;
         Header.SmallPreview565 = EncodeImage(DATATYPE_RGB565_BE, thumbnails[1]!);

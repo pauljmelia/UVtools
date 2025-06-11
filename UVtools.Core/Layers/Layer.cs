@@ -14,6 +14,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Xml.Serialization;
 using UVtools.Core.EmguCV;
 using UVtools.Core.Extensions;
@@ -62,7 +63,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
 
     #region Members
 
-    public object Mutex = new();
+    public Lock Mutex = new();
     private LayerCompressionCodec _compressionCodec;
     private CMat _compressedMat;
     private uint _nonZeroPixelCount;
@@ -194,7 +195,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _boundingRectangle;
         internal set
         {
-            RaiseAndSetIfChanged(ref _boundingRectangle, value);
+            if (!RaiseAndSetIfChanged(ref _boundingRectangle, value)) return;
             RaisePropertyChanged(nameof(BoundingRectangleMillimeters));
         }
     }
@@ -208,10 +209,10 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         {
             var pixelSize = SlicerFile.PixelSize;
             return new RectangleF(
-                (float) Math.Round(_boundingRectangle.X * pixelSize.Width, 2),
-                (float)Math.Round(_boundingRectangle.Y * pixelSize.Height, 2),
-                (float)Math.Round(_boundingRectangle.Width * pixelSize.Width, 2),
-                (float)Math.Round(_boundingRectangle.Height * pixelSize.Height, 2));
+                MathF.Round(_boundingRectangle.X * pixelSize.Width, 2),
+                MathF.Round(_boundingRectangle.Y * pixelSize.Height, 2),
+                MathF.Round(_boundingRectangle.Width * pixelSize.Width, 2),
+                MathF.Round(_boundingRectangle.Height * pixelSize.Height, 2));
         }
     }
 
@@ -318,7 +319,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// <summary>
     /// Gets if this layer is also an transition layer
     /// </summary>
-    public bool IsTransitionLayer => SlicerFile.TransitionLayerCount > 0 && 
+    public bool IsTransitionLayer => SlicerFile.TransitionLayerCount > 0 &&
                                      Index >= SlicerFile.BottomLayerCount && Index < SlicerFile.BottomLayerCount + SlicerFile.TransitionLayerCount;
 
     /// <summary>
@@ -494,7 +495,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _waitTimeBeforeCure;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomWaitTimeBeforeCure, SlicerFile.WaitTimeBeforeCure);
             if (!RaiseAndSetIfChanged(ref _waitTimeBeforeCure, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -509,7 +510,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _exposureTime;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomExposureTime, SlicerFile.ExposureTime);
             if(!RaiseAndSetIfChanged(ref _exposureTime, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -526,7 +527,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _waitTimeAfterCure;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomWaitTimeAfterCure, SlicerFile.WaitTimeAfterCure);
             if (!RaiseAndSetIfChanged(ref _waitTimeAfterCure, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -541,7 +542,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _lightOffDelay;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomLightOffDelay, SlicerFile.LightOffDelay);
             if(!RaiseAndSetIfChanged(ref _lightOffDelay, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -554,10 +555,10 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// </summary>
     public float LiftHeightTotal
     {
-        get => (float)Math.Round(_liftHeight + _liftHeight2, 2);
+        get => MathF.Round(_liftHeight + _liftHeight2, 2);
         set
         {
-            LiftHeight = (float)Math.Round(value, 2);
+            LiftHeight = MathF.Round(value, 2);
             LiftHeight2 = 0;
         }
     }
@@ -570,7 +571,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _liftHeight;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomLiftHeight, SlicerFile.LiftHeight);
             if(!RaiseAndSetIfChanged(ref _liftHeight, value)) return;
             RaisePropertyChanged(nameof(LiftHeightTotal));
@@ -587,7 +588,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _liftSpeed;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value <= 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomLiftSpeed, SlicerFile.LiftSpeed);
             if(!RaiseAndSetIfChanged(ref _liftSpeed, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -600,7 +601,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     public float LiftAcceleration
     {
         get => _liftAcceleration;
-        set => RaiseAndSetIfChanged(ref _liftAcceleration, (float)Math.Round(Math.Max(value, 0), 2));
+        set => RaiseAndSetIfChanged(ref _liftAcceleration, MathF.Round(Math.Max(value, 0), 2));
     }
 
     /// <summary>
@@ -611,7 +612,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _liftHeight2;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomLiftHeight2, SlicerFile.LiftHeight2);
             if (!RaiseAndSetIfChanged(ref _liftHeight2, value)) return;
             RaisePropertyChanged(nameof(LiftHeightTotal));
@@ -628,7 +629,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _liftSpeed2;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value <= 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomLiftSpeed2, SlicerFile.LiftSpeed2);
             if (!RaiseAndSetIfChanged(ref _liftSpeed2, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -641,7 +642,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     public float LiftAcceleration2
     {
         get => _liftAcceleration2;
-        set => RaiseAndSetIfChanged(ref _liftAcceleration2, (float)Math.Round(Math.Max(value, 0), 2));
+        set => RaiseAndSetIfChanged(ref _liftAcceleration2, MathF.Round(Math.Max(value, 0), 2));
     }
 
     public float WaitTimeAfterLift
@@ -649,7 +650,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _waitTimeAfterLift;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value < 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomWaitTimeAfterLift, SlicerFile.WaitTimeAfterLift);
             if (!RaiseAndSetIfChanged(ref _waitTimeAfterLift, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -664,7 +665,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// <summary>
     /// Gets the retract height in mm
     /// </summary>
-    public float RetractHeight => (float)Math.Round(LiftHeightTotal - _retractHeight2, 2);
+    public float RetractHeight => MathF.Round(LiftHeightTotal - _retractHeight2, 2);
 
     /// <summary>
     /// Gets the speed in mm/min for the retracts
@@ -674,7 +675,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _retractSpeed;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value <= 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomRetractSpeed, SlicerFile.RetractSpeed);
             if (!RaiseAndSetIfChanged(ref _retractSpeed, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -687,7 +688,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     public float RetractAcceleration
     {
         get => _retractAcceleration;
-        set => RaiseAndSetIfChanged(ref _retractAcceleration, (float)Math.Round(Math.Max(value, 0), 2));
+        set => RaiseAndSetIfChanged(ref _retractAcceleration, MathF.Round(Math.Max(value, 0), 2));
     }
 
     /// <summary>
@@ -698,7 +699,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _retractHeight2;
         set
         {
-            value = Math.Clamp((float)Math.Round(value, 2), 0, RetractHeightTotal);
+            value = Math.Clamp(MathF.Round(value, 2), 0, RetractHeightTotal);
             RaiseAndSetIfChanged(ref _retractHeight2, value);
             RaisePropertyChanged(nameof(RetractHeight));
             RaisePropertyChanged(nameof(RetractHeightTotal));
@@ -714,7 +715,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get => _retractSpeed2;
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (value <= 0) value = SlicerFile.GetBottomOrNormalValue(this, SlicerFile.BottomRetractSpeed2, SlicerFile.RetractSpeed2);
             if (!RaiseAndSetIfChanged(ref _retractSpeed2, value)) return;
             SlicerFile.UpdatePrintTimeQueued();
@@ -727,7 +728,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     public float RetractAcceleration2
     {
         get => _retractAcceleration2;
-        set => RaiseAndSetIfChanged(ref _retractAcceleration2, (float)Math.Round(Math.Max(value, 0), 2));
+        set => RaiseAndSetIfChanged(ref _retractAcceleration2, MathF.Round(Math.Max(value, 0), 2));
     }
 
     /// <summary>
@@ -839,7 +840,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
             //var globalMilliliters = SlicerFile.MaterialMilliliters - _materialMilliliters;
             if (value < 0)
             {
-                value = (float) Math.Round(GetVolume() / 1000f, 4);
+                value = MathF.Round(GetVolume() / 1000f, 4);
             }
 
             if(!RaiseAndSetIfChanged(ref _materialMilliliters, value)) return;
@@ -859,7 +860,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// <summary>
     /// Gets the time estimate in seconds it takes for this layer to be printed
     /// </summary>
-    public float PrintTime => (float)Math.Round(CalculatePrintTime(), 2, MidpointRounding.AwayFromZero);
+    public float PrintTime => MathF.Round(CalculatePrintTime(), 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Gets the time estimate in minutes and seconds it takes for this layer to be printed
@@ -869,7 +870,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// <summary>
     /// Get the start time estimate in seconds when this layer should start at
     /// </summary>
-    public float StartTime => (float)Math.Round(CalculateStartTime(30), 2, MidpointRounding.AwayFromZero);
+    public float StartTime => MathF.Round(CalculateStartTime(30), 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Get the start time estimate in hours, minutes and seconds when this layer should start at
@@ -879,7 +880,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// <summary>
     /// Get the end time estimate in seconds when this layer should end at
     /// </summary>
-    public float EndTime => (float)Math.Round(CalculateStartTime(30) + CalculatePrintTime(), 2, MidpointRounding.AwayFromZero);
+    public float EndTime => MathF.Round(CalculateStartTime(30) + CalculatePrintTime(), 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Get the end time estimate in hours, minutes and seconds when this layer should end at
@@ -894,7 +895,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         _contours = null;
     }
 
-    private MatCompressor LayerCompressionCodecToMatCompressor(LayerCompressionCodec compressionCodec)
+    private static MatCompressor LayerCompressionCodecToMatCompressor(LayerCompressionCodec compressionCodec)
     {
         return compressionCodec switch
         {
@@ -963,7 +964,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// True if this layer have a valid initialized image, otherwise false
     /// </summary>
     public bool HaveImage => _compressedMat.IsInitialized;
-    
+
     /// <summary>
     /// Gets or sets a new image instance
     /// </summary>
@@ -1074,53 +1075,55 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         get
         {
             if (SlicerFile is null) return false; // Cant verify
+            const float toleranceLayerHeight = HeightPrecisionIncrementFloat;
+            const float tolerance = 0.01f;
             if (IsBottomLayer)
             {
                 if (
-                    (SlicerFile.CanUseLayerPositionZ && _positionZ != RoundHeight(SlicerFile.LayerHeight * Number)) ||
-                    (SlicerFile.CanUseLayerLightOffDelay && _lightOffDelay != SlicerFile.BottomLightOffDelay) ||
-                    (SlicerFile.CanUseLayerWaitTimeBeforeCure && _waitTimeBeforeCure != SlicerFile.BottomWaitTimeBeforeCure) ||
-                    (SlicerFile.CanUseLayerExposureTime && _exposureTime != SlicerFile.BottomExposureTime) ||
-                    (SlicerFile.CanUseLayerWaitTimeAfterCure && _waitTimeAfterCure != SlicerFile.BottomWaitTimeAfterCure) ||
-                    (SlicerFile.CanUseLayerLiftHeight && _liftHeight != SlicerFile.BottomLiftHeight) ||
-                    (SlicerFile.CanUseLayerLiftSpeed && _liftSpeed != SlicerFile.BottomLiftSpeed) ||
-                    (SlicerFile.CanUseLayerLiftAcceleration && _liftAcceleration != SlicerFile.BottomLiftAcceleration) ||
-                    (SlicerFile.CanUseLayerLiftHeight2 && _liftHeight2 != SlicerFile.BottomLiftHeight2) ||
-                    (SlicerFile.CanUseLayerLiftSpeed2 && _liftSpeed2 != SlicerFile.BottomLiftSpeed2) ||
-                    (SlicerFile.CanUseLayerLiftAcceleration2 && _liftAcceleration2 != SlicerFile.BottomLiftAcceleration2) ||
-                    (SlicerFile.CanUseLayerWaitTimeAfterLift && _waitTimeAfterLift != SlicerFile.BottomWaitTimeAfterLift) ||
-                    (SlicerFile.CanUseLayerRetractSpeed && _retractSpeed != SlicerFile.BottomRetractSpeed) ||
-                    (SlicerFile.CanUseLayerRetractAcceleration && _retractAcceleration != SlicerFile.BottomRetractAcceleration) ||
-                    (SlicerFile.CanUseLayerRetractHeight2 && _retractHeight2 != SlicerFile.BottomRetractHeight2) ||
-                    (SlicerFile.CanUseLayerRetractSpeed2 && _retractSpeed2 != SlicerFile.BottomRetractSpeed2) ||
-                    (SlicerFile.CanUseLayerRetractAcceleration2 && _retractAcceleration2 != SlicerFile.BottomRetractAcceleration2) ||
+                    (SlicerFile.CanUseLayerPositionZ && Math.Abs(RoundHeight(_positionZ - SlicerFile.LayerHeight * Number)) > toleranceLayerHeight) ||
+                    (SlicerFile.CanUseLayerLightOffDelay && Math.Abs(_lightOffDelay - SlicerFile.BottomLightOffDelay) > tolerance) ||
+                    (SlicerFile.CanUseLayerWaitTimeBeforeCure && Math.Abs(_waitTimeBeforeCure - SlicerFile.BottomWaitTimeBeforeCure) > tolerance) ||
+                    (SlicerFile.CanUseLayerExposureTime && Math.Abs(_exposureTime - SlicerFile.BottomExposureTime) > tolerance) ||
+                    (SlicerFile.CanUseLayerWaitTimeAfterCure && Math.Abs(_waitTimeAfterCure - SlicerFile.BottomWaitTimeAfterCure) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftHeight && Math.Abs(_liftHeight - SlicerFile.BottomLiftHeight) > tolerance && Math.Abs(_liftHeight - SlicerFile.BottomLiftHeightTotal) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftSpeed && Math.Abs(_liftSpeed - SlicerFile.BottomLiftSpeed) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftAcceleration && Math.Abs(_liftAcceleration - SlicerFile.BottomLiftAcceleration) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftHeight2 && Math.Abs(_liftHeight2 - SlicerFile.BottomLiftHeight2) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftSpeed2 && Math.Abs(_liftSpeed2 - SlicerFile.BottomLiftSpeed2) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftAcceleration2 && Math.Abs(_liftAcceleration2 - SlicerFile.BottomLiftAcceleration2) > tolerance) ||
+                    (SlicerFile.CanUseLayerWaitTimeAfterLift && Math.Abs(_waitTimeAfterLift - SlicerFile.BottomWaitTimeAfterLift) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractSpeed && Math.Abs(_retractSpeed - SlicerFile.BottomRetractSpeed) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractAcceleration && Math.Abs(_retractAcceleration - SlicerFile.BottomRetractAcceleration) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractHeight2 && Math.Abs(_retractHeight2 - SlicerFile.BottomRetractHeight2) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractSpeed2 && Math.Abs(_retractSpeed2 - SlicerFile.BottomRetractSpeed2) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractAcceleration2 && Math.Abs(_retractAcceleration2 - SlicerFile.BottomRetractAcceleration2) > tolerance) ||
                     (SlicerFile.CanUseLayerLightPWM && _lightPWM != SlicerFile.BottomLightPWM)
-                ) 
+                )
                     return false;
             }
             else
             {
                 if (
-                    (SlicerFile.CanUseLayerPositionZ && _positionZ != RoundHeight(SlicerFile.LayerHeight * Number)) ||
-                    (SlicerFile.CanUseLayerLightOffDelay && _lightOffDelay != SlicerFile.LightOffDelay) ||
-                    (SlicerFile.CanUseLayerWaitTimeBeforeCure && _waitTimeBeforeCure != SlicerFile.WaitTimeBeforeCure) ||
-                    (SlicerFile.CanUseLayerExposureTime && !IsTransitionLayer && _exposureTime != SlicerFile.ExposureTime) || // Fix for can't edit settings on menu https://github.com/sn4k3/UVtools/issues/507
+                    (SlicerFile.CanUseLayerPositionZ && Math.Abs(RoundHeight(_positionZ - SlicerFile.LayerHeight * Number)) > toleranceLayerHeight) ||
+                    (SlicerFile.CanUseLayerLightOffDelay && Math.Abs(_lightOffDelay - SlicerFile.LightOffDelay) > tolerance) ||
+                    (SlicerFile.CanUseLayerWaitTimeBeforeCure && Math.Abs(_waitTimeBeforeCure - SlicerFile.WaitTimeBeforeCure) > tolerance) ||
+                    (SlicerFile.CanUseLayerExposureTime && !IsTransitionLayer && Math.Abs(_exposureTime - SlicerFile.ExposureTime) > tolerance) || // Fix for can't edit settings on menu https://github.com/sn4k3/UVtools/issues/507
                     //(SlicerFile.CanUseLayerExposureTime && exposureTime != SlicerFile.ExposureTime) ||
-                    (SlicerFile.CanUseLayerWaitTimeAfterCure && _waitTimeAfterCure != SlicerFile.WaitTimeAfterCure) ||
-                    (SlicerFile.CanUseLayerLiftHeight && _liftHeight != SlicerFile.LiftHeight) ||
-                    (SlicerFile.CanUseLayerLiftSpeed && _liftSpeed != SlicerFile.LiftSpeed) ||
-                    (SlicerFile.CanUseLayerLiftAcceleration && _liftAcceleration != SlicerFile.LiftAcceleration) ||
-                    (SlicerFile.CanUseLayerLiftHeight2 && _liftHeight2 != SlicerFile.LiftHeight2) ||
-                    (SlicerFile.CanUseLayerLiftSpeed2 && _liftSpeed2 != SlicerFile.LiftSpeed2) ||
-                    (SlicerFile.CanUseLayerLiftAcceleration2 && _liftAcceleration2 != SlicerFile.LiftAcceleration2) ||
-                    (SlicerFile.CanUseLayerWaitTimeAfterLift && _waitTimeAfterLift != SlicerFile.WaitTimeAfterLift) ||
-                    (SlicerFile.CanUseLayerRetractSpeed && _retractSpeed != SlicerFile.RetractSpeed) ||
-                    (SlicerFile.CanUseLayerRetractAcceleration && _retractAcceleration != SlicerFile.RetractAcceleration) ||
-                    (SlicerFile.CanUseLayerRetractHeight2 && _retractHeight2 != SlicerFile.RetractHeight2) ||
-                    (SlicerFile.CanUseLayerRetractSpeed2 && _retractSpeed2 != SlicerFile.RetractSpeed2) ||
-                    (SlicerFile.CanUseLayerRetractAcceleration2 && _retractAcceleration2 != SlicerFile.RetractAcceleration2) ||
+                    (SlicerFile.CanUseLayerWaitTimeAfterCure && Math.Abs(_waitTimeAfterCure - SlicerFile.WaitTimeAfterCure) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftHeight && Math.Abs(_liftHeight - SlicerFile.LiftHeight) > tolerance && Math.Abs(_liftHeight - SlicerFile.LiftHeightTotal) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftSpeed && Math.Abs(_liftSpeed - SlicerFile.LiftSpeed) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftAcceleration && Math.Abs(_liftAcceleration - SlicerFile.LiftAcceleration) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftHeight2 && Math.Abs(_liftHeight2 - SlicerFile.LiftHeight2) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftSpeed2 && Math.Abs(_liftSpeed2 - SlicerFile.LiftSpeed2) > tolerance) ||
+                    (SlicerFile.CanUseLayerLiftAcceleration2 && Math.Abs(_liftAcceleration2 - SlicerFile.LiftAcceleration2) > tolerance) ||
+                    (SlicerFile.CanUseLayerWaitTimeAfterLift && Math.Abs(_waitTimeAfterLift - SlicerFile.WaitTimeAfterLift) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractSpeed && Math.Abs(_retractSpeed - SlicerFile.RetractSpeed) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractAcceleration && Math.Abs(_retractAcceleration - SlicerFile.RetractAcceleration) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractHeight2 && Math.Abs(_retractHeight2 - SlicerFile.RetractHeight2) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractSpeed2 && Math.Abs(_retractSpeed2 - SlicerFile.RetractSpeed2) > tolerance) ||
+                    (SlicerFile.CanUseLayerRetractAcceleration2 && Math.Abs(_retractAcceleration2 - SlicerFile.RetractAcceleration2) > tolerance) ||
                     (SlicerFile.CanUseLayerLightPWM && _lightPWM != SlicerFile.LightPWM)
-                ) 
+                )
                     return false;
             }
 
@@ -1137,7 +1140,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// Gets tree contours cache for this layer, however should call <see>
     ///     <cref>GetContours</cref>
     /// </see>
-    /// instead with <see cref="LayerMat"/> instance.  
+    /// instead with <see cref="LayerMat"/> instance.
     /// If not set it will calculate contours first
     /// </summary>
     public EmguContours Contours
@@ -1197,7 +1200,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         _isModified = false;
     }
 
-    public Layer(uint index, Stream stream, FileFormat slicerFile, LayerCompressionCodec? compressionMethod = null) : this(index, stream.ToArray(), slicerFile, compressionMethod) 
+    public Layer(uint index, Stream stream, FileFormat slicerFile, LayerCompressionCodec? compressionMethod = null) : this(index, stream.ToArray(), slicerFile, compressionMethod)
     { }
 
     public Layer(FileFormat slicerFile, LayerCompressionCodec? compressionMethod = null) : this(0, slicerFile, compressionMethod)
@@ -1377,7 +1380,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// Gets the layer area (XY) in mm²
     /// Pixel size * number of pixels
     /// </summary>
-    public float GetArea(byte roundToDigits) => (float)Math.Round(GetArea(), roundToDigits);
+    public float GetArea(byte roundToDigits) => MathF.Round(GetArea(), roundToDigits);
 
     /// <summary>
     /// Gets the layer volume (XYZ) in mm^3
@@ -1389,7 +1392,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
     /// Gets the layer volume (XYZ) in mm^3
     /// Pixel size * number of pixels * layer height
     /// </summary>
-    public float GetVolume(byte roundToDigits) => (float)Math.Round(GetArea() * LayerHeight, roundToDigits);
+    public float GetVolume(byte roundToDigits) => MathF.Round(GetArea() * LayerHeight, roundToDigits);
 
     /// <summary>
     /// Calculates the time estimate in seconds it takes for this layer to be printed
@@ -1531,7 +1534,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
 
     public string FormatFileName(byte padDigits, IndexStartNumber layerIndexStartNumber = default, string appendExt = ".png")
         => FormatFileName(string.Empty, padDigits, layerIndexStartNumber, appendExt);
-    
+
     public string FormatFileNameWithLayerDigits(string prepend = "", IndexStartNumber layerIndexStartNumber = default, string appendExt = ".png")
         => FormatFileName(prepend, SlicerFile.LayerDigits, layerIndexStartNumber, appendExt);
 
@@ -1857,7 +1860,7 @@ public class Layer : BindableBase, IEquatable<Layer>, IEquatable<uint>
         return rect;
     }
 
-    public static float RoundHeight(float height) => (float) Math.Round(height, HeightPrecision, MidpointRounding.AwayFromZero);
+    public static float RoundHeight(float height) => MathF.Round(height, HeightPrecision, MidpointRounding.AwayFromZero);
     public static double RoundHeight(double height) => Math.Round(height, HeightPrecision, MidpointRounding.AwayFromZero);
     public static decimal RoundHeight(decimal height) => Math.Round(height, HeightPrecision, MidpointRounding.AwayFromZero);
 

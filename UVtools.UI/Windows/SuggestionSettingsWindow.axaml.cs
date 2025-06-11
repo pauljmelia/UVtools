@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using UVtools.Core.Dialogs;
@@ -12,6 +11,7 @@ using UVtools.UI.Controls;
 using UVtools.UI.Controls.Suggestions;
 using UVtools.UI.Extensions;
 using AvaloniaStatic = UVtools.UI.Controls.AvaloniaStatic;
+using ZLinq;
 
 namespace UVtools.UI.Windows;
 
@@ -124,11 +124,11 @@ public partial class SuggestionSettingsWindow : WindowEx
 
         if (highlightSuggestion is not null)
         {
-            SelectedSuggestion = Suggestions.FirstOrDefault(suggestion => suggestion.GetType() == highlightSuggestion.GetType());
+            SelectedSuggestion = Suggestions.AsValueEnumerable().FirstOrDefault(suggestion => suggestion.GetType() == highlightSuggestion.GetType());
         }
     }
 
-    public async void ResetDefaults()
+    public async Task ResetDefaults()
     {
         if (await this.MessageBoxQuestion(
                 "Are you sure you want to reset all suggestions to the default settings?",
@@ -168,12 +168,12 @@ public partial class SuggestionSettingsWindow : WindowEx
         return true;
     }
 
-    public async void SaveSuggestionClicked()
+    public async Task SaveSuggestionClicked()
     {
         await SaveSuggestion();
     }
 
-    public async void DiscardSuggestionClicked()
+    public async Task DiscardSuggestionClicked()
     {
         if (_activeSuggestion is null) return;
 
@@ -184,7 +184,7 @@ public partial class SuggestionSettingsWindow : WindowEx
         ActiveSuggestion = SuggestionManager.GetSuggestion(_activeSuggestion.GetType())?.Clone();
     }
 
-    public async void ResetSuggestionClicked()
+    public async Task ResetSuggestionClicked()
     {
         if (_activeSuggestion is null) return;
 
@@ -199,7 +199,7 @@ public partial class SuggestionSettingsWindow : WindowEx
         SuggestionManager.SetSuggestion(suggestion.Clone(), true);
     }
 
-    public async void ImportSettingsClicked()
+    public async Task ImportSettingsClicked()
     {
         if (_activeSuggestion is null) return;
         var files = await OpenFilePickerAsync(AvaloniaStatic.SuggestionSettingFileFilter);
@@ -213,7 +213,7 @@ public partial class SuggestionSettingsWindow : WindowEx
                 await this.MessageBoxError("Unable to import settings, file may be malformed.", "Error while trying to import the settings");
                 return;
             }
-            
+
             if (_activeSuggestion.GetType() != suggestion.GetType())
             {
                 await this.MessageBoxError($"Unable to import '{suggestion.GetType().Name}' to '{_activeSuggestion.GetType().Name}', the type does not match the active suggestion.\n" +
@@ -229,7 +229,7 @@ public partial class SuggestionSettingsWindow : WindowEx
         }
     }
 
-    public async void ExportSettingsClicked()
+    public async Task ExportSettingsClicked()
     {
         if (_activeSuggestion is null) return;
         using var file = await SaveFilePickerAsync(_activeSuggestion.Id, AvaloniaStatic.SuggestionSettingFileFilter);

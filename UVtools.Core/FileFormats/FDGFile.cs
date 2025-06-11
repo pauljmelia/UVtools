@@ -15,12 +15,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UVtools.Core.Extensions;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -275,12 +275,12 @@ public sealed class FDGFile : FileFormat
     public class Preview
     {
         /// <summary>
-        /// Gets the X dimension of the preview image, in pixels. 
+        /// Gets the X dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(0)] public uint ResolutionX { get; set; }
 
         /// <summary>
-        /// Gets the Y dimension of the preview image, in pixels. 
+        /// Gets the Y dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(1)] public uint ResolutionY { get; set; }
 
@@ -433,8 +433,8 @@ public sealed class FDGFile : FileFormat
 
         public void Encode(Mat mat, uint layerIndex)
         {
-            List<byte> rawData = new();
-                
+            List<byte> rawData = [];
+
             //byte color = byte.MaxValue >> 1;
             byte color = byte.MaxValue;
             uint stride = 0;
@@ -467,7 +467,7 @@ public sealed class FDGFile : FileFormat
                 var span = mat.GetRowByteSpan(y);
                 for (int x = 0; x < span.Length; x++)
                 {
-                        
+
                     var grey7 = (byte)((span[x] >> 1) & 0x7f);
                     if (grey7 > 0x7c)
                     {
@@ -496,8 +496,8 @@ public sealed class FDGFile : FileFormat
             }
 
 
-            EncodedRle = Parent!.HeaderSettings.EncryptionKey > 0 
-                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData) 
+            EncodedRle = Parent!.HeaderSettings.EncryptionKey > 0
+                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData)
                 : rawData.ToArray();
 
             DataSize = (uint) EncodedRle.Length;
@@ -524,12 +524,13 @@ public sealed class FDGFile : FileFormat
 
     public override string ConvertMenuGroup => "Chitubox";
 
-    public override FileExtension[] FileExtensions { get; } = {
-        new(typeof(FDGFile), "fdg", "Voxelab FDG"),
-    };
+    public override FileExtension[] FileExtensions { get; } =
+    [
+        new(typeof(FDGFile), "fdg", "Voxelab FDG")
+    ];
 
     public override PrintParameterModifier[] PrintParameterModifiers { get; } =
-    {
+    [
         PrintParameterModifier.BottomLayerCount,
         PrintParameterModifier.BottomExposureTime,
         PrintParameterModifier.ExposureTime,
@@ -544,21 +545,22 @@ public sealed class FDGFile : FileFormat
         PrintParameterModifier.RetractSpeed,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } =
+    [
         PrintParameterModifier.LightOffDelay,
-        PrintParameterModifier.ExposureTime,
-    };
+        PrintParameterModifier.ExposureTime
+    ];
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
+    [
         new(400, 300),
         new(200, 125)
-    };
+    ];
 
-    public override uint[] AvailableVersions { get; } = { 2 };
+    public override uint[] AvailableVersions { get; } = [2];
 
     public override uint DefaultVersion => 2;
 
@@ -600,7 +602,7 @@ public sealed class FDGFile : FileFormat
     public override float MachineZ
     {
         get => HeaderSettings.BedSizeZ > 0 ? HeaderSettings.BedSizeZ : base.MachineZ;
-        set => base.MachineZ = HeaderSettings.BedSizeZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = HeaderSettings.BedSizeZ = MathF.Round(value, 2);
     }
 
     public override FlipDirection DisplayMirror
@@ -646,13 +648,13 @@ public sealed class FDGFile : FileFormat
     public override float BottomLightOffDelay
     {
         get => HeaderSettings.BottomLightOffDelay;
-        set => base.BottomLightOffDelay = HeaderSettings.BottomLightOffDelay = (float)Math.Round(value, 2);
+        set => base.BottomLightOffDelay = HeaderSettings.BottomLightOffDelay = MathF.Round(value, 2);
     }
 
     public override float LightOffDelay
     {
         get => HeaderSettings.LightOffDelay;
-        set => base.LightOffDelay = HeaderSettings.LightOffDelay = (float)Math.Round(value, 2);
+        set => base.LightOffDelay = HeaderSettings.LightOffDelay = MathF.Round(value, 2);
     }
 
     public override float BottomWaitTimeBeforeCure
@@ -684,31 +686,31 @@ public sealed class FDGFile : FileFormat
     public override float ExposureTime
     {
         get => HeaderSettings.LayerExposureSeconds;
-        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = (float)Math.Round(value, 2);
+        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight
     {
         get => HeaderSettings.BottomLiftHeight;
-        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => HeaderSettings.LiftHeight;
-        set => base.LiftHeight = HeaderSettings.LiftHeight = (float)Math.Round(value, 2);
+        set => base.LiftHeight = HeaderSettings.LiftHeight = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => HeaderSettings.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed
     {
         get => HeaderSettings.LiftSpeed;
-        set => base.LiftSpeed = HeaderSettings.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = HeaderSettings.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomRetractSpeed => RetractSpeed;
@@ -716,7 +718,7 @@ public sealed class FDGFile : FileFormat
     public override float RetractSpeed
     {
         get => HeaderSettings.RetractSpeed;
-        set => base.RetractSpeed = HeaderSettings.RetractSpeed = (float)Math.Round(value, 2);
+        set => base.RetractSpeed = HeaderSettings.RetractSpeed = MathF.Round(value, 2);
     }
 
     public override byte BottomLightPWM
@@ -753,14 +755,14 @@ public sealed class FDGFile : FileFormat
 
     public override float MaterialGrams
     {
-        get => (float)Math.Round(HeaderSettings.WeightG, 3);
-        set => base.MaterialGrams = HeaderSettings.WeightG = (float)Math.Round(value, 3);
+        get => MathF.Round(HeaderSettings.WeightG, 3);
+        set => base.MaterialGrams = HeaderSettings.WeightG = MathF.Round(value, 3);
     }
 
     public override float MaterialCost
     {
-        get => (float) Math.Round(HeaderSettings.CostDollars, 3);
-        set => base.MaterialCost = HeaderSettings.CostDollars = (float)Math.Round(value, 3);
+        get => MathF.Round(HeaderSettings.CostDollars, 3);
+        set => base.MaterialCost = HeaderSettings.CostDollars = MathF.Round(value, 3);
     }
 
     public override string MachineName
@@ -769,7 +771,7 @@ public sealed class FDGFile : FileFormat
         set => base.MachineName = HeaderSettings.MachineName = value;
     }
 
-    public override object[] Configs => new object[] { HeaderSettings };
+    public override object[] Configs => [HeaderSettings];
 
     #endregion
 
@@ -804,7 +806,7 @@ public sealed class FDGFile : FileFormat
         using var outputFile = new FileStream(TemporaryOutputFileFullPath, FileMode.Create, FileAccess.Write);
         outputFile.Seek(Helpers.Serializer.SizeOf(HeaderSettings), SeekOrigin.Begin);
 
-        Mat?[] thumbnails = { GetSmallestThumbnail(), GetLargestThumbnail() };
+        Mat?[] thumbnails = [GetSmallestThumbnail(), GetLargestThumbnail()];
         for (byte i = 0; i < thumbnails.Length; i++)
         {
             var image = thumbnails[i];
@@ -958,7 +960,7 @@ public sealed class FDGFile : FileFormat
 
         Init(HeaderSettings.LayerCount, DecodeType == FileDecodeType.Partial);
         LayersDefinitions = new LayerDef[HeaderSettings.LayerCount];
-            
+
         progress.Reset(OperationProgress.StatusDecodeLayers, HeaderSettings.LayerCount);
         foreach (var batch in BatchLayersIndexes())
         {
@@ -969,7 +971,7 @@ public sealed class FDGFile : FileFormat
                 var layerDef = Helpers.Deserialize<LayerDef>(inputFile);
                 layerDef.Parent = this;
                 LayersDefinitions[layerIndex] = layerDef;
-                    
+
                 Debug.Write($"LAYER {layerIndex} -> ");
                 Debug.WriteLine(layerDef);
 
@@ -1029,7 +1031,7 @@ public sealed class FDGFile : FileFormat
     #region Static Methods
     public static byte[] LayerRleCrypt(uint seed, uint layerIndex, IEnumerable<byte> input)
     {
-        var result = input.ToArray();
+        var result = input.AsValueEnumerable().ToArray();
         LayerRleCryptBuffer(seed, layerIndex, result);
         return result;
     }

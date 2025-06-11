@@ -12,12 +12,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
 using UVtools.Core.Extensions;
 using UVtools.Core.GCode;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -27,7 +27,7 @@ public sealed class ChituboxZipFile : FileFormat
 
     public const string GCodeFilename = "run.gcode";
 
-    public static readonly string[] ThumbnailsEntryNames = { "preview.png", "preview_cropping.png" };
+    public static readonly string[] ThumbnailsEntryNames = ["preview.png", "preview_cropping.png"];
     #endregion
 
     #region Sub Classes
@@ -73,22 +73,24 @@ public sealed class ChituboxZipFile : FileFormat
 
     #region Properties
     public Header HeaderSettings { get; } = new();
-        
+
     public override FileFormatType FileType => FileFormatType.Archive;
 
     public override string ConvertMenuGroup => "Chitubox";
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(ChituboxZipFile), "zip", "Chitubox Zip")
-    };
+    ];
 
-    public override PrintParameterModifier[] PrintParameterModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterModifiers { get; } =
+    [
         PrintParameterModifier.BottomLayerCount,
         PrintParameterModifier.TransitionLayerCount,
 
         PrintParameterModifier.BottomWaitTimeBeforeCure,
         PrintParameterModifier.WaitTimeBeforeCure,
-            
+
         PrintParameterModifier.BottomExposureTime,
         PrintParameterModifier.ExposureTime,
 
@@ -117,10 +119,11 @@ public sealed class ChituboxZipFile : FileFormat
         PrintParameterModifier.RetractSpeed2,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } =
+    [
         PrintParameterModifier.PositionZ,
         PrintParameterModifier.WaitTimeBeforeCure,
         PrintParameterModifier.ExposureTime,
@@ -133,14 +136,14 @@ public sealed class ChituboxZipFile : FileFormat
         PrintParameterModifier.RetractSpeed,
         PrintParameterModifier.RetractHeight2,
         PrintParameterModifier.RetractSpeed2,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
-        new(954, 850), 
+    [
+        new(954, 850),
         new(168, 150)
-    };
+    ];
 
     public override uint ResolutionX
     {
@@ -163,13 +166,13 @@ public sealed class ChituboxZipFile : FileFormat
     public override float DisplayHeight
     {
         get => HeaderSettings.MachineY;
-        set => base.DisplayHeight = HeaderSettings.MachineY = RoundDisplaySize(value); 
+        set => base.DisplayHeight = HeaderSettings.MachineY = RoundDisplaySize(value);
     }
 
     public override float MachineZ
     {
         get => HeaderSettings.MachineZ > 0 ? HeaderSettings.MachineZ : base.MachineZ;
-        set => base.MachineZ = HeaderSettings.MachineZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = HeaderSettings.MachineZ = MathF.Round(value, 2);
     }
 
     public override FlipDirection DisplayMirror
@@ -222,55 +225,55 @@ public sealed class ChituboxZipFile : FileFormat
     public override float BottomWaitTimeBeforeCure
     {
         get => HeaderSettings.BottomLightOffDelay;
-        set => base.BottomWaitTimeBeforeCure = HeaderSettings.BottomLightOffDelay = (float)Math.Round(value, 2);
+        set => base.BottomWaitTimeBeforeCure = HeaderSettings.BottomLightOffDelay = MathF.Round(value, 2);
     }
 
     public override float WaitTimeBeforeCure
     {
         get => HeaderSettings.LightOffDelay;
-        set => base.WaitTimeBeforeCure = HeaderSettings.LightOffDelay = (float)Math.Round(value, 2);
+        set => base.WaitTimeBeforeCure = HeaderSettings.LightOffDelay = MathF.Round(value, 2);
     }
 
     public override float BottomExposureTime
     {
         get => HeaderSettings.BottomExposureTime;
-        set => base.BottomExposureTime = HeaderSettings.BottomExposureTime = HeaderSettings.BottomLayExposureTime = (float)Math.Round(value, 2);
+        set => base.BottomExposureTime = HeaderSettings.BottomExposureTime = HeaderSettings.BottomLayExposureTime = MathF.Round(value, 2);
     }
 
     public override float ExposureTime
     {
         get => HeaderSettings.ExposureTime;
-        set => base.ExposureTime = HeaderSettings.ExposureTime = (float)Math.Round(value, 2);
+        set => base.ExposureTime = HeaderSettings.ExposureTime = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight
     {
         get => HeaderSettings.BottomLiftHeight;
-        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => HeaderSettings.LiftHeight;
-        set => base.LiftHeight = HeaderSettings.LiftHeight = (float)Math.Round(value, 2);
+        set => base.LiftHeight = HeaderSettings.LiftHeight = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => HeaderSettings.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed
     {
         get => HeaderSettings.LiftSpeed;
-        set => base.LiftSpeed = HeaderSettings.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = HeaderSettings.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override float RetractSpeed
     {
         get => HeaderSettings.RetractSpeed;
-        set => base.RetractSpeed = HeaderSettings.RetractSpeed = (float)Math.Round(value, 2);
+        set => base.RetractSpeed = HeaderSettings.RetractSpeed = MathF.Round(value, 2);
     }
 
     public override byte BottomLightPWM
@@ -307,20 +310,20 @@ public sealed class ChituboxZipFile : FileFormat
 
     public override float MaterialGrams
     {
-        get => (float) Math.Round(HeaderSettings.WeightG, 3);
+        get => MathF.Round(HeaderSettings.WeightG, 3);
         set
         {
-            HeaderSettings.WeightG = (float)Math.Round(value, 3);
+            HeaderSettings.WeightG = MathF.Round(value, 3);
             RaisePropertyChanged();
         }
     }
 
     public override float MaterialCost
     {
-        get => (float) Math.Round(HeaderSettings.Price, 3);
+        get => MathF.Round(HeaderSettings.Price, 3);
         set
         {
-            HeaderSettings.Price = (float)Math.Round(value, 3);
+            HeaderSettings.Price = MathF.Round(value, 3);
             RaisePropertyChanged();
         }
     }
@@ -341,7 +344,7 @@ public sealed class ChituboxZipFile : FileFormat
         set => base.MachineName = HeaderSettings.MachineType = value;
     }
 
-    public override object[] Configs => new object[] { HeaderSettings };
+    public override object[] Configs => [HeaderSettings];
 
     public override bool SupportGCode => base.SupportGCode && !IsPHZZip;
 
@@ -431,7 +434,7 @@ public sealed class ChituboxZipFile : FileFormat
 
                 foreach (var propertyInfo in HeaderSettings.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    var displayNameAttribute = propertyInfo.GetCustomAttributes(false).OfType<DisplayNameAttribute>().FirstOrDefault();
+                    var displayNameAttribute = propertyInfo.GetCustomAttributes(false).AsValueEnumerable().OfType<DisplayNameAttribute>().FirstOrDefault();
                     if (displayNameAttribute is null) continue;
                     if (!splitLine[0].Trim(' ', ';').Equals(displayNameAttribute.DisplayName)) continue;
                     propertyInfo.SetValueFromString(HeaderSettings, splitLine[1].Trim());
@@ -450,7 +453,7 @@ public sealed class ChituboxZipFile : FileFormat
             {
                 if(!zipEntry.Name.EndsWith(".png")) continue;
                 var filename = Path.GetFileNameWithoutExtension(zipEntry.Name);
-                if (!filename.All(char.IsDigit)) continue;
+                if (!filename.AsValueEnumerable().All(char.IsDigit)) continue;
                 if (!uint.TryParse(filename, out var layerIndex)) continue;
                 HeaderSettings.LayerCount = Math.Max(HeaderSettings.LayerCount, layerIndex);
             }
@@ -474,14 +477,14 @@ public sealed class ChituboxZipFile : FileFormat
     public override void RebuildGCode()
     {
         if (!SupportGCode || SuppressRebuildGCode) return;
-        GCode?.RebuildGCode(this, new object[]{ HeaderSettings });
+        GCode?.RebuildGCode(this, [HeaderSettings]);
         RaisePropertyChanged(nameof(GCodeStr));
     }
 
     protected override void PartialSaveInternally(OperationProgress progress)
     {
         using var outputFile = ZipFile.Open(TemporaryOutputFileFullPath, ZipArchiveMode.Update);
-        var entriesToRemove = outputFile.Entries.Where(zipEntry => zipEntry.Name.EndsWith(".gcode")).ToArray();
+        var entriesToRemove = outputFile.Entries.AsValueEnumerable().Where(zipEntry => zipEntry.Name.EndsWith(".gcode")).ToArray();
         foreach (var zipEntry in entriesToRemove)
         {
             zipEntry.Delete();

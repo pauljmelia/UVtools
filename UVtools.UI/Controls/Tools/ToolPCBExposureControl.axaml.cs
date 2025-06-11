@@ -4,12 +4,14 @@ using Avalonia.Threading;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using UVtools.Core.Excellon;
 using UVtools.Core.Extensions;
 using UVtools.Core.Operations;
 using UVtools.UI.Extensions;
 using UVtools.UI.Windows;
+using ZLinq;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace UVtools.UI.Controls.Tools;
@@ -61,7 +63,7 @@ public partial class ToolPCBExposureControl : ToolControl
         {
             var files = args.Data.GetFiles();
             if (files is null) return;
-            Operation.AddFiles(files.Select(file => file.TryGetLocalPath()).ToArray()!);
+            Operation.AddFiles(files.AsValueEnumerable().Select(file => file.TryGetLocalPath()).ToArray()!);
         });
 
         _timer = new Timer(50)
@@ -86,7 +88,7 @@ public partial class ToolPCBExposureControl : ToolControl
                     _timer.Stop();
                     _timer.Start();
                 };
-                    
+
                 Operation.Files.CollectionChanged += (sender, e) =>
                 {
                     if (e.NewItems is null) return;
@@ -118,10 +120,10 @@ public partial class ToolPCBExposureControl : ToolControl
             {
                 return;
             }
-                
-            if (!OperationPCBExposure.ValidExtensions.Any(extension => _selectedFile.IsExtension(extension)) || !_selectedFile.Exists) return;
+
+            if (!OperationPCBExposure.ValidExtensions.AsValueEnumerable().Any(extension => _selectedFile.IsExtension(extension)) || !_selectedFile.Exists) return;
             var file = (OperationPCBExposure.PCBExposureFile)_selectedFile.Clone();
-            file.InvertPolarity = ExcellonDrillFormat.Extensions.Any(extension => file.IsExtension(extension));
+            file.InvertPolarity = ExcellonDrillFormat.Extensions.AsValueEnumerable().Any(extension => file.IsExtension(extension));
             _previewImage?.Dispose();
             using var mat = Operation.GetMat(file);
 
@@ -139,10 +141,10 @@ public partial class ToolPCBExposureControl : ToolControl
         {
             Debug.WriteLine(e);
         }
-            
+
     }
 
-    public async void AddFiles()
+    public async Task AddFiles()
     {
         var files = await App.MainWindow.OpenFilePickerAsync(
             AvaloniaStatic.CreateFilePickerFileTypes("Gerber files", OperationPCBExposure.ValidExtensions),
@@ -150,10 +152,10 @@ public partial class ToolPCBExposureControl : ToolControl
 
         if (files.Count == 0) return;
 
-        Operation.AddFiles(files.Select(file => file.TryGetLocalPath()!).ToArray());
+        Operation.AddFiles(files.AsValueEnumerable().Select(file => file.TryGetLocalPath()!).ToArray());
     }
 
-    public async void AddFilesFromZip()
+    public async Task AddFilesFromZip()
     {
         var files = await App.MainWindow.OpenFilePickerAsync(AvaloniaStatic.ZipFileFilter);
         if (files.Count == 0 || files[0].TryGetLocalPath() is not { } filePath) return;

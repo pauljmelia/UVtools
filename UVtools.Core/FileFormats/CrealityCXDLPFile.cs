@@ -16,7 +16,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UVtools.Core.Converters;
@@ -26,6 +25,7 @@ using UVtools.Core.Layers;
 using UVtools.Core.Objects;
 using UVtools.Core.Operations;
 using UVtools.Core.Printer;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -48,16 +48,16 @@ public sealed class CrealityCXDLPFile : FileFormat
         /// <summary>
         /// Gets the size of the magic
         /// </summary>
-        [FieldOrder(0)] 
-        [FieldEndianness(Endianness.Big)] 
+        [FieldOrder(0)]
+        [FieldEndianness(Endianness.Big)]
         public uint MagicSize { get; set; } = MAGIC_SIZE;
 
         /// <summary>
         /// Gets the magic name
         /// </summary>
-        [FieldOrder(1)] 
-        [FieldLength(MAGIC_SIZE)] 
-        [SerializeAs(SerializedType.TerminatedString)] 
+        [FieldOrder(1)]
+        [FieldLength(MAGIC_SIZE)]
+        [SerializeAs(SerializedType.TerminatedString)]
         public string Magic { get; set; } = MAGIC_VALUE;
 
         [FieldOrder(2)]
@@ -73,24 +73,24 @@ public sealed class CrealityCXDLPFile : FileFormat
         /// <summary>
         /// Gets the number of records in the layer table
         /// </summary>
-        [FieldOrder(4)] 
-        [FieldEndianness(Endianness.Big)] 
+        [FieldOrder(4)]
+        [FieldEndianness(Endianness.Big)]
         public ushort LayerCount { get; set; }
 
         /// <summary>
         /// Gets the printer resolution along X axis, in pixels. This information is critical to correctly decoding layer images.
         /// </summary>
         [FieldOrder(5)]
-        [FieldEndianness(Endianness.Big)] 
+        [FieldEndianness(Endianness.Big)]
         public ushort ResolutionX { get; set; }
 
         /// <summary>
         /// Gets the printer resolution along Y axis, in pixels. This information is critical to correctly decoding layer images.
         /// </summary>
         [FieldOrder(6)]
-        [FieldEndianness(Endianness.Big)] 
+        [FieldEndianness(Endianness.Big)]
         public ushort ResolutionY { get; set; }
-            
+
         [FieldOrder(7)] [FieldLength(64)]
         public byte[] Offset { get; set; } = new byte[64];
 
@@ -266,7 +266,7 @@ public sealed class CrealityCXDLPFile : FileFormat
 
         [FieldOrder(0)] [FieldEndianness(Endianness.Big)] public uint LayerArea { get; set; }
         [FieldOrder(1)] [FieldEndianness(Endianness.Big)] public uint LineCount { get; set; }
-        [FieldOrder(2)] [FieldCount(nameof(LineCount))] public LayerLine[] Lines { get; set; } = Array.Empty<LayerLine>();
+        [FieldOrder(2)] [FieldCount(nameof(LineCount))] public LayerLine[] Lines { get; set; } = [];
         [FieldOrder(3)] public PageBreak PageBreak { get; set; } = new();
 
         public LayerDef() { }
@@ -330,7 +330,7 @@ public sealed class CrealityCXDLPFile : FileFormat
 
     public sealed class PageBreak
     {
-        public static byte[] Bytes => new byte[] {0x0D, 0x0A};
+        public static byte[] Bytes => [0x0D, 0x0A];
 
         [FieldOrder(0)] public byte Line { get; set; } = 0x0D;
         [FieldOrder(1)] public byte Break { get; set; } = 0x0A;
@@ -393,14 +393,15 @@ public sealed class CrealityCXDLPFile : FileFormat
 
     public override string ConvertMenuGroup => "Creality CXDLP";
 
-    public override FileExtension[] FileExtensions { get; } = {
-        new(typeof(CrealityCXDLPFile), "cxdlp", "Creality CXDLP"),
-    };
+    public override FileExtension[] FileExtensions { get; } =
+    [
+        new(typeof(CrealityCXDLPFile), "cxdlp", "Creality CXDLP")
+    ];
 
     public override SpeedUnit FormatSpeedUnit => SpeedUnit.MillimetersPerSecond;
 
     public override PrintParameterModifier[] PrintParameterModifiers { get; } =
-    {
+    [
         PrintParameterModifier.BottomLayerCount,
 
         PrintParameterModifier.WaitTimeBeforeCure,
@@ -415,17 +416,17 @@ public sealed class CrealityCXDLPFile : FileFormat
         PrintParameterModifier.RetractSpeed,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
+    [
         new(116, 116),
         new(290, 290),
         new(290, 290)
-    };
+    ];
 
-    public override uint[] AvailableVersions { get; } = { 2, 3 };
+    public override uint[] AvailableVersions { get; } = [2, 3];
 
     public override uint DefaultVersion => DEFAULT_VERSION;
 
@@ -453,10 +454,10 @@ public sealed class CrealityCXDLPFile : FileFormat
 
     public override float DisplayWidth
     {
-        get => (float)Math.Round(float.Parse(SlicerInfoSettings.DisplayWidth, CultureInfo.InvariantCulture), 2);
+        get => MathF.Round(float.Parse(SlicerInfoSettings.DisplayWidth, CultureInfo.InvariantCulture), 2);
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             SlicerInfoSettings.DisplayWidth = value.ToString(CultureInfo.InvariantCulture);
             base.DisplayWidth = value;
         }
@@ -464,10 +465,10 @@ public sealed class CrealityCXDLPFile : FileFormat
 
     public override float DisplayHeight
     {
-        get => (float)Math.Round(float.Parse(SlicerInfoSettings.DisplayHeight, CultureInfo.InvariantCulture), 3);
+        get => MathF.Round(float.Parse(SlicerInfoSettings.DisplayHeight, CultureInfo.InvariantCulture), 3);
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             SlicerInfoSettings.DisplayHeight = value.ToString(CultureInfo.InvariantCulture);
             base.DisplayHeight = value;
         }
@@ -519,10 +520,10 @@ public sealed class CrealityCXDLPFile : FileFormat
 
     public override float ExposureTime
     {
-        get => (float)Math.Round(SlicerInfoSettings.ExposureTime / 10.0f, 1);
+        get => MathF.Round(SlicerInfoSettings.ExposureTime / 10.0f, 1);
         set
         {
-            value = (float)Math.Round(value, 1);
+            value = MathF.Round(value, 1);
             SlicerInfoSettings.ExposureTime = (ushort) (value * 10);
             base.ExposureTime = value;
         }
@@ -596,7 +597,7 @@ public sealed class CrealityCXDLPFile : FileFormat
         set => base.MaterialName = SlicerInfoV3Settings.MaterialName.Value = value;
     }
 
-    public override object[] Configs => new object[] { HeaderSettings, SlicerInfoSettings, SlicerInfoV3Settings, FooterSettings };
+    public override object[] Configs => [HeaderSettings, SlicerInfoSettings, SlicerInfoV3Settings, FooterSettings];
 
     #endregion
 
@@ -617,7 +618,7 @@ public sealed class CrealityCXDLPFile : FileFormat
        if (string.IsNullOrWhiteSpace(MachineName) || (!MachineName.StartsWith("CL") && !MachineName.StartsWith("CT")))
         {
             bool found = false;
-            foreach (var machine in Machine.Machines
+            foreach (var machine in Machine.Machines.AsValueEnumerable()
                          .Where(machine => machine.Brand == PrinterBrand.Creality
                                            && (machine.Model.StartsWith("CL") || machine.Model.StartsWith("CT"))
                                            ))
@@ -629,7 +630,7 @@ public sealed class CrealityCXDLPFile : FileFormat
                     break;
                 }
             }
-            
+
             if(!found) throw new InvalidDataException("Unable to detect the printer model from resolution, check if resolution is well defined on slicer for your printer model.");
         }
 
@@ -646,7 +647,7 @@ public sealed class CrealityCXDLPFile : FileFormat
         {
             progress.PauseIfRequested();
             var encodeLength = ThumbnailsOriginalSize[previewIndex].Area() * 2;
-            
+
             previews[previewIndex] = EncodeImage(DATATYPE_RGB565_BE, Thumbnails[previewIndex]);
 
             if (encodeLength != previews[previewIndex].Length)
@@ -696,7 +697,7 @@ public sealed class CrealityCXDLPFile : FileFormat
 
                     var span = mat.GetDataByteReadOnlySpan();
 
-                    layerBytes[layerIndex] = new();
+                    layerBytes[layerIndex] = [];
 
                     uint lineCount = 0;
 
@@ -891,7 +892,7 @@ public sealed class CrealityCXDLPFile : FileFormat
         }
 
         SanitizeProperties();
-            
+
         using var outputFile = new FileStream(TemporaryOutputFileFullPath, FileMode.Open, FileAccess.ReadWrite);
         outputFile.Seek(offset, SeekOrigin.Begin);
         outputFile.WriteSerialize(SlicerInfoSettings);
@@ -969,7 +970,7 @@ public sealed class CrealityCXDLPFile : FileFormat
                 }
             }
         }
-            
+
 
         if (restorePosition) fs.Seek(position, SeekOrigin.Begin);
 

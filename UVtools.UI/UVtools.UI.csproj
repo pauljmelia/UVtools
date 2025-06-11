@@ -18,7 +18,7 @@
     net6.0-windows10.0.18362.0: If your app targets Windows 10, version 1903.
     net6.0-windows10.0.19041.0: If your app targets Windows 10, version 2004.
     net6.0-windows10.0.22000.0: If your app targets Windows 11.
-    
+
     <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
         <TargetFramework>$(TargetFramework)-windows10.0.17763.0</TargetFramework>
     </PropertyGroup>
@@ -33,13 +33,14 @@
         <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
         <PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
-        <PackageReference Include="Projektanker.Icons.Avalonia" Version="9.5.0" />
-        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.5.0" />
-        <PackageReference Include="Projektanker.Icons.Avalonia.MaterialDesign" Version="9.5.0" />
+        <PackageReference Include="Projektanker.Icons.Avalonia" Version="9.6.2" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.MaterialDesign" Version="9.6.2" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\UVtools.AvaloniaControls\UVtools.AvaloniaControls.csproj" />
+        <ProjectReference Include="..\UVtools.Cmd\UVtools.Cmd.csproj" />
         <ProjectReference Include="..\UVtools.Core\UVtools.Core.csproj" />
     </ItemGroup>
 
@@ -82,5 +83,5 @@
     <Target Name="SaveRuntimeIdentifierToFile" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)'!=''">
         <WriteLinesToFile File="$(PublishDir)\runtime_package.dat" Lines="$(RuntimeIdentifier)" Overwrite="true" />
     </Target>
-    
+
 </Project>

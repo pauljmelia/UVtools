@@ -14,9 +14,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
 using UVtools.Core.Extensions;
+using ZLinq;
 
 namespace UVtools.Core.Gerber.Primitives;
 
@@ -54,9 +54,9 @@ public class OutlinePrimitive : Primitive
     /// The X and Y coordinates are not modal: both X and Y must be specified for all points.
     /// 2+n
     /// </summary>
-    public string[] CoordinatesExpression { get; set; } = Array.Empty<string>();
+    public string[] CoordinatesExpression { get; set; } = [];
 
-    public PointF[] Coordinates { get; set; } = Array.Empty<PointF>();
+    public PointF[] Coordinates { get; set; } = [];
 
     /// <summary>
     /// Rotation angle, in degrees counterclockwise, a decimal.
@@ -72,7 +72,7 @@ public class OutlinePrimitive : Primitive
     {
         ExposureExpression = exposureExpression;
         CoordinatesExpression = coordinatesExpression;
-        RotationExpression = rotationExpression;
+        RotationExpression = rotationExpression.Replace("X", "*", StringComparison.OrdinalIgnoreCase); ;
     }
 
 
@@ -151,8 +151,8 @@ public class OutlinePrimitive : Primitive
     public override Primitive Clone()
     {
         var primitive = MemberwiseClone() as OutlinePrimitive;
-        primitive!.CoordinatesExpression = primitive.CoordinatesExpression.ToArray();
-        primitive.Coordinates = primitive.Coordinates.ToArray();
+        primitive!.CoordinatesExpression = primitive.CoordinatesExpression.AsValueEnumerable().ToArray();
+        primitive.Coordinates = primitive.Coordinates.AsValueEnumerable().ToArray();
         return primitive;
     }
 }

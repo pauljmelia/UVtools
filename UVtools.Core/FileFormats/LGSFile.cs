@@ -148,8 +148,8 @@ public sealed class LGSFile : FileFormat
 
         public unsafe byte[] Encode(Mat mat)
         {
-            List<byte> rawData = new();
-            List<byte> chunk = new();
+            List<byte> rawData = [];
+            List<byte> chunk = [];
 
             if (Parent.HeaderSettings.PrinterModel is 4000 or 4500)
             {
@@ -264,15 +264,16 @@ public sealed class LGSFile : FileFormat
 
     public override string ConvertMenuGroup => "Longer3D";
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new (typeof(LGSFile), "lgs", "Longer Orange 10 (LGS)"),
         new (typeof(LGSFile), "lgs30", "Longer Orange 30 (LGS30)"),
         new (typeof(LGSFile), "lgs120", "Longer Orange 120 (LGS120)"),
-        new (typeof(LGSFile), "lgs4k", "Longer Orange 4k (LGS4K)"),
-    };
+        new (typeof(LGSFile), "lgs4k", "Longer Orange 4k (LGS4K)")
+    ];
 
     public override PrintParameterModifier[] PrintParameterModifiers { get; } =
-    {
+    [
         PrintParameterModifier.BottomLayerCount,
 
         PrintParameterModifier.BottomWaitTimeBeforeCure,
@@ -284,11 +285,11 @@ public sealed class LGSFile : FileFormat
         PrintParameterModifier.BottomLiftHeight,
         PrintParameterModifier.BottomLiftSpeed,
         PrintParameterModifier.LiftHeight,
-        PrintParameterModifier.LiftSpeed,
-            
-    };
+        PrintParameterModifier.LiftSpeed
 
-    public override Size[] ThumbnailsOriginalSize { get; } = {new(120, 150)};
+    ];
+
+    public override Size[] ThumbnailsOriginalSize { get; } = [new(120, 150)];
 
     public override uint ResolutionX
     {
@@ -314,7 +315,7 @@ public sealed class LGSFile : FileFormat
 
     public override float DisplayWidth
     {
-        get => (float) Math.Round(ResolutionX / HeaderSettings.PixelPerMmX, 3);
+        get => MathF.Round(ResolutionX / HeaderSettings.PixelPerMmX, 3);
         set
         {
             base.DisplayWidth = value;
@@ -324,7 +325,7 @@ public sealed class LGSFile : FileFormat
 
     public override float DisplayHeight
     {
-        get => (float)Math.Round(ResolutionY / HeaderSettings.PixelPerMmY, 3);
+        get => MathF.Round(ResolutionY / HeaderSettings.PixelPerMmY, 3);
         set
         {
             base.DisplayHeight = value;
@@ -335,7 +336,7 @@ public sealed class LGSFile : FileFormat
     public override float MachineZ
     {
         get => HeaderSettings.MachineZ > 0 ? HeaderSettings.MachineZ : base.MachineZ;
-        set => base.MachineZ = HeaderSettings.MachineZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = HeaderSettings.MachineZ = MathF.Round(value, 2);
     }
 
     public override FlipDirection DisplayMirror
@@ -434,7 +435,7 @@ public sealed class LGSFile : FileFormat
 
     public override float RetractSpeed => LiftSpeed;
 
-    public override object[] Configs => new object[] { HeaderSettings };
+    public override object[] Configs => [HeaderSettings];
 
     #endregion
 

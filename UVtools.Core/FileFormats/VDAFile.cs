@@ -11,11 +11,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Xml.Serialization;
 using UVtools.Core.Extensions;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -24,10 +24,10 @@ namespace UVtools.Core.FileFormats;
 [XmlRoot(ElementName = "root")]
 public class VDARoot
 {
-    
+
     public class VDAFileInfo
     {
-        
+
         public class VDAVersion
         {
             public ushort Major { get; set; } = 1;
@@ -35,10 +35,10 @@ public class VDARoot
 
         }
 
-        
+
         public class VDAWritten
         {
-            
+
             [XmlRoot(ElementName = "By")]
             public class VDABy
             {
@@ -77,7 +77,7 @@ public class VDARoot
         public VDAWritten Written { get; set; } = new();
     }
 
-    
+
     public class VDASlices
     {
         public ushort Count { get; set; } = 1;
@@ -95,7 +95,7 @@ public class VDARoot
         public uint LayerCount { get; set; }
     }
 
-    
+
     public class VDAMachines
     {
         public string FileType { get; set; } = "ZIP File";
@@ -103,7 +103,7 @@ public class VDARoot
         public string PixelXSize { get; set; } = "50um";
         public string PixelYSize { get; set; } = "50um";
 
-        [XmlElement("Anti-Aliasing")] 
+        [XmlElement("Anti-Aliasing")]
         public byte AntiAliasing { get; set; } = 1;
 
         public float XLength { get; set; }
@@ -138,7 +138,7 @@ public class VDARoot
     public VDAFileInfo FileInfo { get; set; } = new();
     public VDASlices Slices { get; set; } = new();
     public VDAMachines Machines { get; set; } = new();
-    public List<VDALayer> Layers { get; set; } = new();
+    public List<VDALayer> Layers { get; set; } = [];
 }
 #endregion
 
@@ -155,9 +155,10 @@ public sealed class VDAFile : FileFormat
 
     public override string ConvertMenuGroup => "Voxeldance";
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(VDAFile), "zip", "Voxeldance Additive Zip")
-    };
+    ];
 
     public override uint ResolutionX
     {
@@ -202,7 +203,7 @@ public sealed class VDAFile : FileFormat
 
             if (ushort.TryParse(umStr, out var um) && um > 0)
             {
-                ManifestFile.Machines.XLength = (float) Math.Round(ResolutionX * um / 1000f, 2);
+                ManifestFile.Machines.XLength = MathF.Round(ResolutionX * um / 1000f, 2);
             }
 
             return ManifestFile.Machines.XLength;
@@ -224,7 +225,7 @@ public sealed class VDAFile : FileFormat
 
             if (ushort.TryParse(umStr, out var um) && um > 0)
             {
-                ManifestFile.Machines.YWidth = (float)Math.Round(ResolutionY * um / 1000f, 2);
+                ManifestFile.Machines.YWidth = MathF.Round(ResolutionY * um / 1000f, 2);
             }
 
             return ManifestFile.Machines.YWidth;
@@ -264,12 +265,14 @@ public sealed class VDAFile : FileFormat
         set => base.LayerCount = ManifestFile.Slices.LayerCount = base.LayerCount;
     }
 
-        
-    public override object[] Configs => new object[] { 
+
+    public override object[] Configs =>
+    [
         ManifestFile.FileInfo.Version,
-        ManifestFile.FileInfo.Written, 
-        ManifestFile.Machines, 
-        ManifestFile.Slices };
+        ManifestFile.FileInfo.Written,
+        ManifestFile.Machines,
+        ManifestFile.Slices
+    ];
 
     #endregion
 
@@ -287,13 +290,13 @@ public sealed class VDAFile : FileFormat
         try
         {
             using var zip = ZipFile.Open(fileFullPath!, ZipArchiveMode.Read);
-            if (zip.Entries.Any(entry => entry.Name.EndsWith(".xml"))) return true;
+            if (zip.Entries.AsValueEnumerable().Any(entry => entry.Name.EndsWith(".xml"))) return true;
         }
         catch (Exception e)
         {
             Debug.WriteLine(e);
         }
-            
+
 
         return false;
     }
@@ -311,14 +314,14 @@ public sealed class VDAFile : FileFormat
             Replace($".{FileExtensions[0].Extension}", ".xml");
 
         EncodeLayersInZip(outputFile, 4, IndexStartNumber.One, progress);
-        
+
         outputFile.CreateEntryFromSerializeXml(manifestFilename, ManifestFile, ZipArchiveMode.Create, XmlExtensions.SettingsIndent, true);
     }
 
     protected override void DecodeInternally(OperationProgress progress)
     {
         using var inputFile = ZipFile.Open(FileFullPath!, ZipArchiveMode.Read);
-        var entry = inputFile.Entries.FirstOrDefault(zipEntry => zipEntry.Name.EndsWith(".xml"));
+        var entry = inputFile.Entries.AsValueEnumerable().FirstOrDefault(zipEntry => zipEntry.Name.EndsWith(".xml"));
         if (entry is null)
         {
             Clear();

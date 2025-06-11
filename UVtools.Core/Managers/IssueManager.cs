@@ -15,6 +15,7 @@ using UVtools.Core.FileFormats;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
 using UVtools.Core.PixelEditor;
+using ZLinq;
 
 namespace UVtools.Core.Managers;
 
@@ -22,7 +23,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 {
     public FileFormat SlicerFile { get; }
 
-    public List<MainIssue> IgnoredIssues { get; } = new();
+    public List<MainIssue> IgnoredIssues { get; } = [];
 
     public bool HaveIssues => Count > 0;
 
@@ -37,7 +38,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
     /// <returns></returns>
     public MainIssue[] GetVisible()
     {
-        return this.Where(mainIssue => !IgnoredIssues.Contains(mainIssue)).ToArray();
+        return this.AsValueEnumerable().Where(mainIssue => !IgnoredIssues.Contains(mainIssue)).ToArray();
     }
 
     public static Issue[] GetIssues(IEnumerable<MainIssue> issues)
@@ -119,15 +120,15 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
     public List<MainIssue> DetectIssues(IssuesDetectionConfiguration? config = null, OperationProgress? progress = null)
     {
-        if (SlicerFile.DecodeType == FileFormat.FileDecodeType.Partial) return new List<MainIssue>();
+        if (SlicerFile.DecodeType == FileFormat.FileDecodeType.Partial) return [];
 
         config ??= new IssuesDetectionConfiguration();
         var (
-            islandConfig, 
-            overhangConfig, 
-            resinTrapConfig, 
-            touchBoundConfig, 
-            printHeightConfig, 
+            islandConfig,
+            overhangConfig,
+            resinTrapConfig,
+            touchBoundConfig,
+            printHeightConfig,
             emptyLayerConfig
             ) = config;
 
@@ -153,7 +154,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
         List<MainIssue> GetResult()
         {
-            return result.OrderBy(mainIssue => mainIssue.Type).ThenBy(issue => issue.StartLayerIndex).ThenByDescending(issue => issue.Area).ToList();
+            return result.AsValueEnumerable().OrderBy(mainIssue => mainIssue.Type).ThenBy(issue => issue.StartLayerIndex).ThenByDescending(issue => issue.Area).ToList();
         }
 
         void GenerateAirMap(IInputArray input, IInputOutputArray output, VectorOfVectorOfPoint? externals)
@@ -169,6 +170,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
             if (SlicerFile.PrintHeight > printHeightWithOffset)
             {
                 var issues = (from layer in SlicerFile where layer.PositionZ > printHeightWithOffset select new Issue(layer)).ToList();
+
                 if(issues.Count > 0) AddIssue(new MainIssue(MainIssue.IssueType.PrintHeight, issues));
             }
         }
@@ -179,8 +181,8 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
             {
                 var layer = SlicerFile[layerIndex];
                 if (!layer.IsEmpty) continue;
-                
-                if (!emptyLayerConfig.IgnoreStartingEmptyLayers 
+
+                if (!emptyLayerConfig.IgnoreStartingEmptyLayers
                     && emptyLayerConfig is {IgnoreLooseEmptyLayers: false, IgnoreEndingEmptyLayers: false})
                 {
                     AddIssue(new MainIssue(MainIssue.IssueType.EmptyLayer, new Issue(layer)));
@@ -269,7 +271,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                     if (touchBoundConfig.Enabled)
                     {
                         // TouchingBounds Checker
-                        List<Point> pixels = new();
+                        List<Point> pixels = [];
                         bool touchTop = layer.BoundingRectangle.Top <= touchBoundConfig.MarginTop;
                         bool touchBottom = layer.BoundingRectangle.Bottom >= image.SourceMat.Height - touchBoundConfig.MarginBottom;
                         bool touchLeft = layer.BoundingRectangle.Left <= touchBoundConfig.MarginLeft;
@@ -279,7 +281,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                         int miny = int.MaxValue;
                         int maxx = 0;
                         int maxy = 0;
-                        
+
                         if (touchTop || touchBottom)
                         {
                             for (int x = layer.BoundingRectangle.X; x < layer.BoundingRectangle.Right; x++) // Check Top and Bottom bounds
@@ -466,7 +468,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                 // Get array that contains details of each connected component
                                 //var ccStats = stats.GetData();
                                 //stats[i][0]: Left Edge of Connected Component
-                                //stats[i][1]: Top Edge of Connected Component 
+                                //stats[i][1]: Top Edge of Connected Component
                                 //stats[i][2]: Width of Connected Component
                                 //stats[i][3]: Height of Connected Component
                                 //stats[i][4]: Total Area (in pixels) in Connected Component
@@ -497,9 +499,9 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                         previousSpan = previousImage.RoiMat.GetDataByteReadOnlySpan2D();
                                     }
 
-                                    List<Point> points = new();
+                                    List<Point> points = [];
                                     uint pixelsSupportingIsland = 0;
-                                    
+
                                     for (int y = rect.Y; y < rect.Bottom; y++)
                                     for (int x = rect.X; x < rect.Right; x++)
                                     {
@@ -581,7 +583,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                             continue;
                                         }
                                     }
-                                    
+
                                     AddIssue(new MainIssue(MainIssue.IssueType.Island, new IssueOfPoints(layer, points, islandBoundingRectangle)));
                                 }
                             }
@@ -670,7 +672,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
             };
 
             /* define all mats up front, reducing allocations */
-            
+
             using var layerAirMap = new Mat();
             Mat? currentAirMap = null;
             /* the first pass does bottom to top, and tracks anything it thinks is a resin trap */
@@ -708,8 +710,8 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
                 if (hollows[layerIndex] is not null)
                 {
-                    resinTraps[layerIndex] = new();
-                    airContours[layerIndex] = new();
+                    resinTraps[layerIndex] = [];
+                    airContours[layerIndex] = [];
                     Parallel.For(0, hollows[layerIndex].Count, CoreSettings.ParallelOptions, i =>
                     {
                         progress.PauseIfRequested();
@@ -779,7 +781,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
             for (int layerIndex = resinTraps.Length - 1; layerIndex >= resinTrapConfig.StartLayerIndex; layerIndex--)
             {
                 if (progress.Token.IsCancellationRequested) return GetResult();
-                    
+
                 var curLayer = matCache.Get((uint)layerIndex, 1);
 
                 if (layerIndex == resinTraps.Length - 1)
@@ -812,7 +814,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
                 if (resinTraps[layerIndex] is not null)
                 {
-                    suctionCups[layerIndex] = new();
+                    suctionCups[layerIndex] = [];
                     /* here we don't worry about finding contours on the layer, the bottom to top pass did that already */
                     /* all we care about is contours the first pass thought were resin traps, since there was no access to air from the bottom */
                     Parallel.For(0, resinTraps[layerIndex].Count, CoreSettings.ParallelOptions, x =>
@@ -850,7 +852,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                     var group = resinTrapGroups[groupIndex];
                                     if (group[^1].layerIndex > layerIndex + 1)
                                     {
-                                        // this group is disconnected from current layer by at least 1 layer, no need to process anything from here anymore 
+                                        // this group is disconnected from current layer by at least 1 layer, no need to process anything from here anymore
                                         //group.Clear();
                                         //resinTrapGroups.Remove(group);
                                         continue;
@@ -862,7 +864,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                         var testContour = group[contourIndex].contour;
 
                                         if (!EmguContours.ContoursIntersect(testContour, resinTraps[layerIndex][x])) continue;
-                                        // if any contours in this group, that are on the previous layer, overlap the new suction area, they are all suction areas 
+                                        // if any contours in this group, that are on the previous layer, overlap the new suction area, they are all suction areas
 
                                         foreach (var item in group)
                                         {
@@ -903,8 +905,8 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
                                 if (overlappingGroupIndexes.Count == 0)
                                 {
-                                    // no overlaps, make a single issue 
-                                    resinTrapGroups.Add(new List<(VectorOfVectorOfPoint contour, uint layerIndex)> { (resinTraps[layerIndex][x], (uint)layerIndex) });
+                                    // no overlaps, make a single issue
+                                    resinTrapGroups.Add([(resinTraps[layerIndex][x], (uint)layerIndex)]);
                                 }
                                 else if (overlappingGroupIndexes.Count == 1)
                                 {
@@ -1023,7 +1025,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                             if (overlappingGroupIndexes.Count == 0)
                             {
                                 /* no overlaps, make a single issue */
-                                resinTrapGroups.Add(new List<IssueOfContours> { trapIssue });
+                                resinTrapGroups.Add([trapIssue]);
                             }
                             else if (overlappingGroupIndexes.Count == 1)
                             {
@@ -1052,7 +1054,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
 
                     foreach (var group in resinTrapGroups)
                     {
-                        if(group.Any(issue => issue.LayerIndex == 0)) continue; // Not a trap if on plate
+                        if(group.AsValueEnumerable().Any(issue => issue.LayerIndex == 0)) continue; // Not a trap if on plate
                         AddIssue(new MainIssue(MainIssue.IssueType.ResinTrap, group));
                     }
                 },
@@ -1093,7 +1095,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
                                 if (overlappingGroupIndexes.Count == 0)
                                 {
                                     /* no overlaps, make a new group */
-                                    suctionGroups.Add(new List<IssueOfContours> { trapIssue });
+                                    suctionGroups.Add([trapIssue]);
                                 }
                                 else if (overlappingGroupIndexes.Count == 1)
                                 {
@@ -1155,11 +1157,12 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
     {
         var drillOps = new List<PixelOperation>();
         var drilledIssues = new List<MainIssue>();
+        var radius = SlicerFile.PixelsToNormalizedPitch(ventHoleDiameter / 2);
         //var suctionReliefSize = (ushort)Math.Max(SlicerFile.PpmmMax * 0.8, 17);
         /* for each suction cup issue that is an initial layer */
         foreach (var mainIssue in issues)
         {
-            var drillPoint = GetDrillLocation((IssueOfContours)mainIssue[0], ventHoleDiameter);
+            var drillPoint = GetDrillLocation((IssueOfContours)mainIssue[0], radius);
             if (drillPoint.IsAnyNegative()) continue;
             drillOps.Add(new PixelDrainHole(mainIssue.StartLayerIndex, drillPoint, (ushort)ventHoleDiameter));
             drilledIssues.Add(mainIssue);
@@ -1170,7 +1173,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
         return drilledIssues.ToArray();
     }
 
-    public static Point GetDrillLocation(IssueOfContours issue, int diameter)
+    public static Point GetDrillLocation(IssueOfContours issue, Size radius)
     {
         using var vecCentroid = new VectorOfPoint(issue.Contours[0]);
         var centroid = EmguContour.GetCentroid(vecCentroid);
@@ -1181,7 +1184,7 @@ public sealed class IssueManager : RangeObservableCollection<MainIssue>
         var inverseOffset = new Point(issue.BoundingRectangle.X * -1, issue.BoundingRectangle.Y * -1);
         using var vec = new VectorOfVectorOfPoint(issue.Contours);
         CvInvoke.DrawContours(contourMat, vec, -1, EmguExtensions.WhiteColor, -1, LineType.EightConnected, null, int.MaxValue, inverseOffset);
-        CvInvoke.Circle(circleCheck, new(centroid.X + inverseOffset.X, centroid.Y + inverseOffset.Y), diameter, EmguExtensions.WhiteColor, -1);
+        circleCheck.DrawCircle(new(centroid.X + inverseOffset.X, centroid.Y + inverseOffset.Y), radius, EmguExtensions.WhiteColor, -1);
         CvInvoke.BitwiseAnd(circleCheck, contourMat, circleCheck);
 
         return CvInvoke.HasNonZero(circleCheck)

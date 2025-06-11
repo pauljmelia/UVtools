@@ -9,10 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Xml.Serialization;
 using UVtools.Core.Extensions;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.UI.Structures;
 
@@ -53,7 +53,7 @@ public class OperationProfiles //: IList<Operation>
     [XmlElement(typeof(OperationPCBExposure))]
     [XmlElement(typeof(OperationStirResin))]
     [XmlElement(typeof(OperationScripting))]
-        
+
     [XmlElement(typeof(OperationLayerExportGif))]
     [XmlElement(typeof(OperationLayerExportHtml))]
 
@@ -65,7 +65,7 @@ public class OperationProfiles //: IList<Operation>
     [XmlElement(typeof(OperationCalibrateTolerance))]
     [XmlElement(typeof(OperationCalibrateGrayscale))]
     [XmlElement(typeof(OperationCalibrateStressTower))]
-    public List<Operation> Operations { get; internal set; } = new();
+    public List<Operation> Operations { get; internal set; } = [];
 
     [XmlIgnore]
     public static List<Operation> Profiles
@@ -112,7 +112,7 @@ public class OperationProfiles //: IList<Operation>
     #endregion
 
     #region Enumerable
-        
+
     public IEnumerator<Operation> GetEnumerator()
     {
         return Operations.GetEnumerator();
@@ -266,8 +266,8 @@ public class OperationProfiles //: IList<Operation>
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static List<Operation> GetOperations(Type type) 
-        => Profiles.Where(operation => operation.GetType() == type).ToList();
+    public static List<Operation> GetOperations(Type type)
+        => Profiles.AsValueEnumerable().Where(operation => operation.GetType() == type).ToList();
 
     /// <summary>
     /// Get all profiles within a type

@@ -1,5 +1,102 @@
 # Changelog
 
+## 29/05/2025 - v5.1.2
+
+- (Add) PrusaSlicer printer: Elegoo Saturn 4 (#1028)
+- (Fix) Anycubic ZIP: Incorrect file volume (#983)
+- (Fix) Tool - Change Resolution: In some cases it was clipping content due operation not copying the bounding model but just the absolute center of the image (#1031)
+- (Fix) Tool - Pixel Arithmetic and Stress Tower: A leftover debug method was causing the run in single thread leading to very slow processing
+- (Fix) Prevent a deadloop when calculating the bounding rectangle of all empty layers
+- (Upgrade) .NET from 9.0.4 to 9.0.5
+
+## 09/05/2025 - v5.1.1
+
+- (Fix) Anycubic ZIP: `System.InvalidOperationException: Sequence contains no elements` when having empty layers (#1023)
+- (Improvement) CTB and GOO: Set all lift properties instead some of them for the tilting vat printers
+- (Improvement) Convert most Linq to ZLinq
+- (Upgrade) AvaloniaUI from 11.3.0-beta2 to 11.3.0
+
+## 22/04/2025 - v5.1.0
+
+- (Add) Pixel Arithmetic - Brightness Step: Mutates the initial brightness with a step that is added/subtracted to the current value dependent on the processed layer count (#1014)
+- (Fix) Anycubic ZIP: Implement the missing fields from manifest file and allow to tune TSMC and regular global values (#1018)
+- (Fix) Handle floating precision error when calculating the `PerLayerSettings` flag (#1013)
+- (Fix) Linux: Pixel editor drawing cursor preview not visible (#1019)
+- (Fix) Use `async Task` instead of `async void` where possible
+- (Improvement) Use some refactorings for NET 9.0 features
+- (Change) Compile openCV with lower linux requirement (#1015)
+- (Upgrade) .NET from 9.0.3 to 9.0.4
+- (Upgrade) AvaloniaUI from 11.2.6 to 11.3.0-beta2
+
+## 04/04/2025 - v5.0.9
+
+- (Add) PrusaSlicer printer: Elegoo Mars 5 Ultra (#1006)
+- (Fix) Ignore the "org.freedesktop.DBus.Error.UnknownMethod" exception to prevent crash on Linux (#964)
+- (Fix) Goo: Bad print when using tilting VAT printer (#1013)
+- (Upgrade) .NET from 9.0.2 to 9.0.3
+- (Upgrade) AvaloniaUI from 11.2.5 to 11.2.6
+
+## 10/03/2025 - v5.0.8
+
+- (Fix) Ignore the "org.freedesktop.DBus.Error.ServiceUnknown" exception to prevent crash on Linux (#964)
+- (Upgrade) AvaloniaUI from 11.2.4 to 11.2.5
+
+## 15/02/2025 - v5.0.7
+
+- **Layer previewer: (#990)**
+  - (Add) Shortcuts: Ctrl/⌘ + to zoom in and Ctrl/⌘ - to zoom out in the layer previewer
+  - (Add) Allow to horizontal scroll the image with the mouse dispacement buttons and/or wheel (Only for mouse with such buttons)
+  - (Add) Hold Ctrl key while use the mouse wheel to vertical scroll the image instead of zoom
+  - (Add) Zoom behavior: Zoom with pre-defined levels or native incremental zoom (Configurable in settings, default: Levels)
+  - (Add) Zoom debounce time to prevent the zoom to be triggered multiple times when using a trackpad (Configurable in settings, default: 20ms)
+- (Improvement) Linux: Show app icon on AppImage after integration with the desktop environment
+- (Fix) Unable to find PrusaSlicer >= 2.9.0 on Linux (Flatpak folder change) (#1000)
+- (Fix) PrusaSlicer: Anycubic Photon Mono M7 Max incorrect extension (#995)
+- (Upgrade) .NET from 9.0.1 to 9.0.2
+- (Upgrade) AvaloniaUI from 11.2.3 to 11.2.4
+
+## 31/01/2025 - v5.0.6
+
+- **PCB Exposure:**
+  - (Fix) When importing gerber files via drag and drop to the main window the file was created with 0mm layer height and no exposure set
+  - (Fix) Merging multiple gerber files with mirror active was mirroring the image in each draw causing the wrong output (#980) 
+  - (Fix) Excellon drill format does not load tools when they have spindle parameters [F/C] (#980)
+  - (Fix) Excellon drill format to respect the integer and decimal digit count when specifying them (#980)
+- **Stress Tower:**
+  - (Improvement) Allow to pause and cancel the operation
+  - (Improvement) Process layers in a more efficient way to reduce allocations and be able to produce the test without RAM hogging
+- (Upgrade) .NET from 9.0.0 to 9.0.1
+- (Upgrade) OpenCV from 4.9.0 to 4.10.0
+
+## 09/01/2025 - v5.0.5
+
+- (Add) PrusaSlicer printer: Elegoo Saturn 4 Ultra 16K
+- (Improvement) Goo: Implement and support the tilting vat printers
+- (Improvement) All shapes in pixel editor will now respect the non-equal pixel pitch and compensate the lower side to print a regular shape, this also affects the polygons on PCB exposure tool and other tools as well
+- (Fix) PCB Exposure: Use raw polygons instead of angle aligned polygons to respect the gerber implementation (#976)
+
+## 08/01/2025 - v5.0.4
+
+- PCB Exposure:
+  - (Fix) Unable to parse primitive multiplications (#976)
+  - (Fix) Polygon primitive vertex count parsing to the incorrect variable (#976)
+  - (Fix) Obround aperture to follow the correct implementation (two semicircles connected by parallel lines tangent to their endpoints) (#976)
+  - (Fix) Implement the "hole diameter" argument in all apertures (#976)
+  - (Fix) Implement the "rotation" argument for the polygon aperture
+
+## 28/12/2024 - v5.0.3
+
+- Anycubic file format:
+  - (Fix) Reset TSMC values to comply with globals when decoding file and AdvancedMode is disabled (#971)
+  - (Fix) Setting the LiftHeight2 was setting the base value to BottomLiftHeight2
+  - (Fix) Setting the BottomRetractSpeed was not applying the value in the base property
+- Multiple exposure finder: 
+   - (Fix) Counter triangles not taking all the new left space
+   - (Fix) When doing multiple heights the text label always show the base height
+- (Improvement) Layer image viewer internal handling
+- (Fix) Settings - Send to process: Unable to pick a process file, it was selecting folder instead
+- (Fix) Save As can show incorrect file extension description when there are other file formats with the same extension
+
 ## 19/12/2024 - v5.0.2
 
 - (Fix) Remove a condition that prevents the new Anycubic file format from being used

@@ -119,7 +119,7 @@ public sealed class OSLAFile : FileFormat
     {
         [FieldOrder(0)] public uint TableSize { get; set; }
 
-        [FieldOrder(1)] [FieldCount(nameof(TableSize))] public byte[] Bytes { get; set; } = Array.Empty<byte>();
+        [FieldOrder(1)] [FieldCount(nameof(TableSize))] public byte[] Bytes { get; set; } = [];
 
         public override string ToString()
         {
@@ -249,13 +249,15 @@ public sealed class OSLAFile : FileFormat
     public CustomTable CustomTableSettings { get; private set; } = new();
     public override FileFormatType FileType => FileFormatType.Binary;
 
-    public override FileExtension[] FileExtensions { get; } = {
-        new (typeof(OSLAFile), "osla", "Open SLA universal binary file (OSLA)"),
+    public override FileExtension[] FileExtensions { get; } =
+    [
+        new (typeof(OSLAFile), "osla", "Open SLA universal binary file (OSLA)")
         //new ("omsla", "Open mSLA universal binary file"),
         //new ("odlp", "Open DLP universal binary file"),
-    };
+    ];
 
-    public override PrintParameterModifier[] PrintParameterModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterModifiers { get; } =
+    [
         PrintParameterModifier.BottomLayerCount,
         PrintParameterModifier.TransitionLayerCount,
 
@@ -290,10 +292,11 @@ public sealed class OSLAFile : FileFormat
         PrintParameterModifier.RetractSpeed2,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } =
+    [
         PrintParameterModifier.PositionZ,
         PrintParameterModifier.WaitTimeBeforeCure,
         PrintParameterModifier.ExposureTime,
@@ -306,14 +309,14 @@ public sealed class OSLAFile : FileFormat
         PrintParameterModifier.RetractSpeed,
         PrintParameterModifier.RetractHeight2,
         PrintParameterModifier.RetractSpeed2,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
+    [
         new(400, 400), 
         new(200, 200)
-    };
+    ];
 
     public override uint ResolutionX
     {
@@ -345,7 +348,7 @@ public sealed class OSLAFile : FileFormat
         get => HeaderSettings.MachineZ > 0 ? HeaderSettings.MachineZ : base.MachineZ;
         set
         {
-            HeaderSettings.MachineZ = (float)Math.Round(value, 2);
+            HeaderSettings.MachineZ = MathF.Round(value, 2);
             RaisePropertyChanged();
         }
     }
@@ -400,8 +403,8 @@ public sealed class OSLAFile : FileFormat
 
     public override float MaterialCost
     {
-        get => (float) Math.Round(HeaderSettings.MaterialCost, 3);
-        set => base.MaterialCost = HeaderSettings.MaterialCost = (float)Math.Round(value, 3);
+        get => MathF.Round(HeaderSettings.MaterialCost, 3);
+        set => base.MaterialCost = HeaderSettings.MaterialCost = MathF.Round(value, 3);
     }
 
     public override string? MaterialName
@@ -416,7 +419,7 @@ public sealed class OSLAFile : FileFormat
         set => base.MachineName = HeaderSettings.MachineName = value;
     }
 
-    public override object[] Configs => new object[] { FileSettings, HeaderSettings };
+    public override object[] Configs => [FileSettings, HeaderSettings];
 
     #endregion
 

@@ -18,12 +18,10 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Media;
 using UVtools.Core;
 using UVtools.Core.FileFormats;
@@ -33,6 +31,7 @@ using UVtools.UI.Structures;
 using UVtools.UI.Windows;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 using UVtools.UI.Extensions;
+using ZLinq;
 
 namespace UVtools.UI;
 
@@ -56,7 +55,7 @@ public class App : Application
         SimpleDark*/
     }
 
-    private static readonly Styles ThemeStylesContainer = new();
+    private static readonly Styles ThemeStylesContainer = [];
     public static FluentTheme _fluentTheme = null!;
     //public static SimpleTheme _simpleTheme = null!;
     private static IStyle _colorPickerFluent = null!, _colorPickerSimple = null!;
@@ -91,7 +90,7 @@ public class App : Application
         _fluentTheme.DensityStyle = UserSettings.Instance.General.ThemeDensity;
 
         bool isFluentTheme = theme is ApplicationTheme.FluentSystem or ApplicationTheme.FluentLight or ApplicationTheme.FluentDark;
-        //bool isLightTheme = theme is ApplicationTheme.FluentLight //or ApplicationTheme.SimpleLight 
+        //bool isLightTheme = theme is ApplicationTheme.FluentLight //or ApplicationTheme.SimpleLight
         //                    || (theme == ApplicationTheme.FluentSystem && app.ActualThemeVariant == ThemeVariant.Light);
         //                    //|| (theme == ApplicationTheme.SimpleSystem && app.ActualThemeVariant == ThemeVariant.Light);
 
@@ -191,7 +190,7 @@ public class App : Application
                 {
                     // ignored
                 }
-                
+
                 using var reader = new StringReader(bugDescription);
                 MessageWindow window = null!;
                 window = new MessageWindow($"{About.SoftwareWithVersion} - Crash report",
@@ -199,13 +198,12 @@ public class App : Application
                     $"{About.Software} crashed due an unexpected {category.ToLowerInvariant()} error.\nYou can report this error if you find necessary.\nFind more details below:\n",
                     bugDescription,
                     TextWrapping.Wrap,
-                    new[]
-                    {
+                    [
                         MessageWindow.CreateLinkButtonAction("Report", "fa-solid fa-bug", $"https://github.com/sn4k3/UVtools/issues/new?template=bug_report_form.yml&title={HttpUtility.UrlEncode($"[Crash] {reader.ReadLine()}")}&system={HttpUtility.UrlEncode(system)}&bug_description={HttpUtility.UrlEncode($"```\n{bugDescription}\n```")}", () => window?.Clipboard?.SetTextAsync($"```\n{bugDescription}\n```")),
                         MessageWindow.CreateLinkButtonAction("Help", "fa-solid fa-question", "https://github.com/sn4k3/UVtools/discussions/categories/q-a", () => window?.Clipboard?.SetTextAsync($"```\n{bugDescription}\n```")),
                         MessageWindow.CreateButtonAction("Restart", "fa-solid fa-redo-alt", () => SystemAware.StartThisApplication()),
                         MessageWindow.CreateCloseButton("fa-solid fa-sign-out-alt")
-                    })
+                    ])
                 {
                     AboutButtonIsVisible = true
                 };
@@ -262,8 +260,8 @@ public class App : Application
                     MessageBoxManager.Standard = UiMessageBoxStandard.Instance;
                 }
             }
-            
-            
+
+
             //desktop.Exit += (sender, e) => ThemeSelector.SaveSelectedTheme(Path.Combine(UserSettings.SettingsFolder, "selected.theme"));
         }
 
@@ -315,12 +313,11 @@ public class App : Application
             $"{About.SoftwareWithVersionArch} [{SystemAware.OperatingSystemName}]\nUnable to run due one or more missing dependencies.\nTriggered by: libcvextern  (OpenCV)",
             message,
             TextWrapping.Wrap,
-            new[]
-            {
+            [
                 MessageWindow.CreateLinkButton("Open manual", "fa-brands fa-edge", "https://github.com/sn4k3/UVtools#requirements"),
                 MessageWindow.CreateLinkButton("Ask for help", "fa-solid fa-question", "https://github.com/sn4k3/UVtools/discussions/categories/q-a"),
                 MessageWindow.CreateCloseButton("fa-solid fa-sign-out-alt")
-            })
+            ])
         {
             AboutButtonIsVisible = true
         };
@@ -353,8 +350,8 @@ public class App : Application
     {
         var uri =
             // Allow for assembly overrides
-            url.StartsWith("avares://") 
-            ? new Uri(url) 
+            url.StartsWith("avares://")
+            ? new Uri(url)
             : new Uri($"avares://{AssemblyName}{url}");
 
         return uri;
@@ -367,7 +364,7 @@ public class App : Application
 
     public static Bitmap GetBitmapFromAsset(string url) => new(GetAsset(url));
 
-        
+
     public static string? GetPrusaSlicerDirectory(bool isSuperSlicer = false, bool isAlpha = false)
     {
         var slicerFolder = isSuperSlicer ? "SuperSlicer" : "PrusaSlicer";
@@ -381,13 +378,23 @@ public class App : Application
 
         if (OperatingSystem.IsLinux())
         {
-            var folder1 = Path.Combine(
+            // 2.9.0 flatpak
+            var flatpak = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".config",
+                ".var",
+                "app",
+                $"com.prusa3d.{slicerFolder}",
+                "config",
+                slicerFolder);
+            if (Directory.Exists(flatpak)) return flatpak;
+
+            // AppImage
+            var folder1 = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), // home/user/.config
                 slicerFolder);
             if (Directory.Exists(folder1)) return folder1;
             return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), // home/user
                 $".{slicerFolder}");
         }
 
@@ -458,7 +465,7 @@ public class App : Application
 
             var description = ((AssemblyDescriptionAttribute)attributes[0]).Description + $"{Environment.NewLine}{Environment.NewLine}Available File Formats:";
 
-            return FileFormat.AvailableFormats.SelectMany(fileFormat => fileFormat.FileExtensions).Aggregate(description, (current, fileExtension) => current + $"{Environment.NewLine}- {fileExtension.Description} (.{fileExtension.Extension})");
+            return FileFormat.AvailableFormats.AsValueEnumerable().SelectMany(fileFormat => fileFormat.FileExtensions).Aggregate(description, (current, fileExtension) => current + $"{Environment.NewLine}- {fileExtension.Description} (.{fileExtension.Extension})");
         }
     }
 

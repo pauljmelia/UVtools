@@ -11,11 +11,11 @@ using Emgu.CV.Structure;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UVtools.Core.Extensions;
 using UVtools.Core.FileFormats;
+using ZLinq;
 
 namespace UVtools.Core.Operations;
 
@@ -99,7 +99,7 @@ public class OperationLightBleedCompensation : Operation
 
     public override string ToString()
     {
-        var result = $"[Subject: {_subject}]" + 
+        var result = $"[Subject: {_subject}]" +
                      $" [Lookup: {_lookupMode}]" +
                      $" [Dim by: {_dimBy}]" + LayerRangeString;
         if (!string.IsNullOrEmpty(ProfileName)) result = $"{ProfileName}: {result}";
@@ -142,14 +142,14 @@ public class OperationLightBleedCompensation : Operation
     }
 
     public int MinimumBrightness => 255 - MaximumSubtraction;
-    public float MinimumBrightnessPercentage => (float)Math.Round(MinimumBrightness * 100.0 / 255.0, 2);
-    public int MaximumSubtraction => DimByArray.Aggregate(0, (current, dim) => current + dim);
+    public float MinimumBrightnessPercentage => MathF.Round(MinimumBrightness * 100 / 255.0f, 2);
+    public int MaximumSubtraction => DimByArray.AsValueEnumerable().Aggregate(0, (current, dim) => current + dim);
 
     public byte[] DimByArray
     {
         get
         {
-            List<byte> levels = new();
+            List<byte> levels = [];
             var split = _dimBy.Split(',', StringSplitOptions.TrimEntries);
             foreach (var str in split)
             {
@@ -166,7 +166,7 @@ public class OperationLightBleedCompensation : Operation
     {
         get
         {
-            List<MCvScalar> levels = new();
+            List<MCvScalar> levels = [];
             var split = _dimBy.Split(',', StringSplitOptions.TrimEntries);
             foreach (var str in split)
             {
@@ -217,7 +217,7 @@ public class OperationLightBleedCompensation : Operation
     public Mat[] GetDimMats()
     {
         var dimLevels = DimByMCvScalar;
-        if (dimLevels.Length == 0) return Array.Empty<Mat>();
+        if (dimLevels.Length == 0) return [];
         var mats = new Mat[dimLevels.Length];
         var matSize = GetRoiSizeOrDefault();
         for (var i = 0; i < mats.Length; i++)
@@ -236,8 +236,8 @@ public class OperationLightBleedCompensation : Operation
         {
             progress.PauseIfRequested();
             var layer = SlicerFile[layerIndex];
-            using var mat = layer.LayerMat;    
-            using var original = mat.Clone();    
+            using var mat = layer.LayerMat;
+            using var original = mat.Clone();
             using var target = GetRoiOrDefault(mat);
 
             for (byte i = 0; i < dimMats.Length; i++)
@@ -267,7 +267,7 @@ public class OperationLightBleedCompensation : Operation
                         mask = nextMatRoi = GetRoiOrDefault(nextMat);
                     }
                 }
-                    
+
                 if (mask is null || (previousMat is null && nextMat is null)) break; // Nothing more to do
                 if (previousMat is not null && nextMat is not null) // both, need to merge previous with next layer
                 {

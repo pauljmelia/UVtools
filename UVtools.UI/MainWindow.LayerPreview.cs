@@ -40,6 +40,7 @@ using AvaloniaStatic = UVtools.UI.Controls.AvaloniaStatic;
 using Point = System.Drawing.Point;
 using Size = System.Drawing.Size;
 using Emgu.CV.Reg;
+using ZLinq;
 
 namespace UVtools.UI;
 
@@ -93,7 +94,7 @@ public partial class MainWindow
 
     public LayerCache LayerCache = new ();
     private Point _lastPixelMouseLocation = Point.Empty;
-    private readonly List<Point[]> _maskPoints = new ();
+    private readonly List<Point[]> _maskPoints = [];
 
 
     public void InitLayerPreview()
@@ -110,9 +111,13 @@ public partial class MainWindow
         _showLayerOutlineEnclosingCircles = Settings.LayerPreview.EnclosingCirclesOutline;
         _showLayerOutlineHollowAreas = Settings.LayerPreview.HollowOutline;
         _showLayerOutlineCentroids = Settings.LayerPreview.CentroidOutline;
-            
+
         LayerImageBox.ZoomLevels = new AdvancedImageBox.ZoomLevelCollection(AppSettings.ZoomLevels);
-            
+        LayerImageBox.ZoomWithMouseWheelBehaviour = Settings.LayerPreview.ZoomPreferNative
+            ? AdvancedImageBox.MouseWheelZoomBehaviours.ZoomNativeAltLevels
+            : AdvancedImageBox.MouseWheelZoomBehaviours.ZoomLevelsAltNative;
+        LayerImageBox.ZoomWithMouseWheelDebounceMilliseconds = Settings.LayerPreview.ZoomDebounceMilliseconds;
+
         LayerImageBox.GetObservable(AdvancedImageBox.ZoomProperty).Subscribe(new AnonymousObserver<int>(zoom =>
         {
             if (!IsFileLoaded) return;
@@ -142,7 +147,7 @@ public partial class MainWindow
                 }
                 else
                 {
-                    if (!SlicerFile.IssueManager.Any(
+                    if (!SlicerFile.IssueManager.AsValueEnumerable().Any(
                             mainIssue => // Find a valid candidate to update layer preview, otherwise quit
                                 mainIssue.IsIssueInBetween(_actualLayer)
                                 && mainIssue.Type is not MainIssue.IssueType.TouchingBound and not MainIssue.IssueType.EmptyLayer)) return;
@@ -198,7 +203,7 @@ public partial class MainWindow
             }
 
             if (!RaiseAndSetIfChanged(ref _showLayerImageRotated, value) || !IsFileLoaded) return;
-                
+
             if (rect != default)
             {
                 LayerImageBox.SelectionRegion = GetTransposedRectangle(rect.ToDotNet()).ToAvalonia();
@@ -469,7 +474,7 @@ public partial class MainWindow
             }
             else
             {
-                DrawModifications(true);
+                _ = DrawModifications(true);
             }
         }
     }
@@ -526,8 +531,8 @@ public partial class MainWindow
 
             return text;
         }
-    } 
-                                                                          
+    }
+
     public string LayerROIStr
     {
         get
@@ -559,19 +564,23 @@ public partial class MainWindow
     {
         get
         {
-            var pixelSize = SlicerFile?.PixelSizeMicronsMax;
             var text = $"Zoom: [ {LayerImageBox.Zoom / 100m}x{(AppSettings.LockedZoomLevel == LayerImageBox.Zoom ? " 🔒 ]" : " ]")}";
-            if (pixelSize > 0)
+            if (IsFileLoaded)
             {
-                if (Math.Abs(SlicerFile!.PixelWidthMicrons - SlicerFile.PixelHeightMicrons) < 0.01)
+                var pixelSizeMax = SlicerFile!.PixelSizeMicronsMax;
+                if (pixelSizeMax > 0)
                 {
-                    text += $"\nPixel: {SlicerFile.PixelSizeMicronsMax}µm";
-                }
-                else
-                {
-                    text += $"\nPixel: {SlicerFile.PixelWidthMicrons}x{SlicerFile.PixelHeightMicrons}µm";
+                    if (SlicerFile.UsingSquarePixels)
+                    {
+                        text += $"\nPixel: {pixelSizeMax}µm²";
+                    }
+                    else
+                    {
+                        text += $"\nPixel: {SlicerFile.PixelWidthMicrons}x{SlicerFile.PixelHeightMicrons}µm";
+                    }
                 }
             }
+
             return text;
         }
     }
@@ -620,7 +629,7 @@ public partial class MainWindow
             if (DataContext is null) return;
             if (!RaiseAndSetIfChanged(ref _actualLayer, value)) return;
 
-                
+
             if (!_layerNavigationSliderDebounceTimer.Enabled) // Doesn't come from ActualLayerSlider timer
             {
                 ActualLayerSlider = _actualLayer; // sync when required
@@ -694,10 +703,10 @@ public partial class MainWindow
             var pixelSize = SlicerFile!.PixelSize;
             if(roi.IsEmpty || pixelSize.IsEmpty) return RectangleF.Empty;
             return new RectangleF(
-                (float)Math.Round(roi.X * pixelSize.Width, 2),
-                (float)Math.Round(roi.Y * pixelSize.Height, 2),
-                (float)Math.Round(roi.Width * pixelSize.Width, 2),
-                (float)Math.Round(roi.Height * pixelSize.Height, 2));
+                MathF.Round(roi.X * pixelSize.Width, 2),
+                MathF.Round(roi.Y * pixelSize.Height, 2),
+                MathF.Round(roi.Width * pixelSize.Width, 2),
+                MathF.Round(roi.Height * pixelSize.Height, 2));
         }
     }
 
@@ -713,7 +722,7 @@ public partial class MainWindow
         ROI = LayerCache.Layer!.BoundingRectangle;
     }
 
-       
+
     public List<Point[]> MaskPoints => _maskPoints;
 
     /*private set
@@ -723,7 +732,7 @@ public partial class MainWindow
         }*/
     public void AddMaskPoints(Point[] points, bool refreshLayer = true)
     {
-        if (_maskPoints.RemoveAll(points1 => points1.SequenceEqual(points)) <= 0)
+        if (_maskPoints.RemoveAll(points1 => points1.AsValueEnumerable().SequenceEqual(points)) <= 0)
         {
             _maskPoints.Add(points);
         }
@@ -745,14 +754,14 @@ public partial class MainWindow
         {
             foreach (var points in pointsOfPoints)
             {
-                if (_maskPoints.RemoveAll(points1 => points1.SequenceEqual(points)) <= 0)
+                if (_maskPoints.RemoveAll(points1 => points1.AsValueEnumerable().SequenceEqual(points)) <= 0)
                 {
                     _maskPoints.Add(points);
                 }
             }
-                
+
         }
-            
+
         ShowLayer();
         RaisePropertyChanged(nameof(LayerROIStr));
     }
@@ -864,7 +873,7 @@ public partial class MainWindow
     {
         if (!IsFileLoaded) return;
 
-        
+
         if (SlicerFile!.SanitizeLayerIndex(ref _actualLayer))
         {
             InvalidateLayerNavigation();
@@ -933,7 +942,7 @@ public partial class MainWindow
                 Debug.WriteLine(string.Empty);
             }*/
 
-            
+
             var imageSpan = LayerCache.ImageSpan;
             var imageBgrSpan = LayerCache.ImageBgraSpan;
 
@@ -1080,9 +1089,9 @@ public partial class MainWindow
             if (_showLayerImageIssues && SlicerFile.IssueManager.Count > 0)
             {
                 //var count = 0;
-                foreach (var issue in SlicerFile.IssueManager.GetIssuesBy(_actualLayer)
-                             .Where(issue => issue.Parent!.Type 
-                                 is not MainIssue.IssueType.PrintHeight 
+                foreach (var issue in SlicerFile.IssueManager.GetIssuesBy(_actualLayer).AsValueEnumerable()
+                             .Where(issue => issue.Parent!.Type
+                                 is not MainIssue.IssueType.PrintHeight
                                  and not MainIssue.IssueType.EmptyLayer))
                 {
                     //count++;
@@ -1168,7 +1177,7 @@ public partial class MainWindow
                             break;
                         }
                     }
-                        
+
                 }
             }
 
@@ -1216,7 +1225,7 @@ public partial class MainWindow
             {
                 for (int i = 0; i < LayerCache.Layer.Contours.Count; i++)
                 {
-                    LayerCache.Layer.Contours[i].FitCircle(LayerCache.ImageBgra, 
+                    LayerCache.Layer.Contours[i].FitCircle(LayerCache.ImageBgra,
                         Settings.LayerPreview.EnclosingCirclesOutlineColor.ToMCvScalar(),
                         Settings.LayerPreview.EnclosingCirclesOutlineThickness, LineType.AntiAlias);
                 }
@@ -1235,7 +1244,7 @@ public partial class MainWindow
                 using var vec = EmguContours.GetNegativeContours(LayerCache.Layer.Contours.Vector, LayerCache.Layer.Contours.Hierarchy);
                 if (vec.Size > 0)
                 {
-                    CvInvoke.DrawContours(LayerCache.ImageBgra, vec, -1, 
+                    CvInvoke.DrawContours(LayerCache.ImageBgra, vec, -1,
                         Settings.LayerPreview.HollowOutlineColor.ToMCvScalar(),
                         Settings.LayerPreview.HollowOutlineLineThickness);
                 }
@@ -1322,7 +1331,7 @@ public partial class MainWindow
                 {
                     CvInvoke.PutText(LayerCache.ImageBgra, $"Triangles: {triangleCount:N0}", new Point(10, 80), FontFace.HersheyDuplex, 3, dotColor, 3);
                 }
-                
+
             }
 
             if (_maskPoints is not null && _maskPoints.Count > 0)
@@ -1349,27 +1358,13 @@ public partial class MainWindow
                             : Settings.PixelEditor.RemovePixelColor);
                     if (operationDrawing.BrushSize == 1)
                     {
-                        LayerCache.ImageBgra.SetByte(operation.Location.X, operation.Location.Y, new[] {color.B, color.G, color.R, color.A});
+                        LayerCache.ImageBgra.SetByte(operation.Location.X, operation.Location.Y, [color.B, color.G, color.R, color.A
+                        ]);
                         continue;
                     }
 
-                    LayerCache.ImageBgra.DrawPolygon((byte)operationDrawing.BrushShape, operationDrawing.BrushSize, operationDrawing.Location,
+                    LayerCache.ImageBgra.DrawAlignedPolygon((byte)operationDrawing.BrushShape, SlicerFile.PixelsToNormalizedPitchF(operationDrawing.BrushSize), operationDrawing.Location,
                         color.ToMCvScalar(), operationDrawing.RotationAngle, operationDrawing.Thickness, operationDrawing.LineType);
-                    /*switch (operationDrawing.BrushShape)
-                    {
-                        case PixelDrawing.BrushShapeType.Square:
-                            CvInvoke.Rectangle(LayerCache.ImageBgr, operationDrawing.Rectangle,
-                                color.ToMCvScalar(), operationDrawing.Thickness,
-                                operationDrawing.LineType);
-                            break;
-                        case PixelDrawing.BrushShapeType.Circle:
-                            CvInvoke.Circle(LayerCache.ImageBgr, operation.Location, operationDrawing.BrushSize / 2,
-                                color.ToMCvScalar(), operationDrawing.Thickness,
-                                operationDrawing.LineType);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }*/
                 }
                 else if (operation.OperationType == PixelOperation.PixelOperationType.Text)
                 {
@@ -1419,7 +1414,8 @@ public partial class MainWindow
                         ? Settings.PixelEditor.SupportsHighlightColor
                         : Settings.PixelEditor.SupportsColor;
 
-                    CvInvoke.Circle(LayerCache.ImageBgra, operation.Location, operationSupport.TipDiameter / 2,
+                    LayerCache.ImageBgra.DrawCircle(operation.Location,
+                        SlicerFile.PixelsToNormalizedPitch(operationSupport.TipDiameter / 2),
                         color.ToMCvScalar(), -1);
                 }
                 else if (operation.OperationType == PixelOperation.PixelOperationType.DrainHole)
@@ -1429,7 +1425,7 @@ public partial class MainWindow
                         ? Settings.PixelEditor.DrainHoleHighlightColor
                         : Settings.PixelEditor.DrainHoleColor;
 
-                    CvInvoke.Circle(LayerCache.ImageBgra, operation.Location, operationDrainHole.Diameter / 2, color.ToMCvScalar(), -1);
+                    LayerCache.ImageBgra.DrawCircle(operation.Location, SlicerFile.PixelsToNormalizedPitch(operationDrainHole.Diameter / 2), color.ToMCvScalar(), -1);
                 }
             }
 
@@ -1445,12 +1441,12 @@ public partial class MainWindow
             {
 
 
-                // Don't render crosshairs for selected issue that are not on the current layer, or for 
+                // Don't render crosshairs for selected issue that are not on the current layer, or for
                 // issue types that don't have a specific location or bounds.
-                foreach (var issue in SlicerFile.IssueManager.GetIssuesBy(_actualLayer)
-                             .Where(issue => issue.Parent!.Type 
-                                 is not MainIssue.IssueType.TouchingBound 
-                                 and not MainIssue.IssueType.PrintHeight 
+                foreach (var issue in SlicerFile.IssueManager.GetIssuesBy(_actualLayer).AsValueEnumerable()
+                             .Where(issue => issue.Parent!.Type
+                                 is not MainIssue.IssueType.TouchingBound
+                                 and not MainIssue.IssueType.PrintHeight
                                  and not MainIssue.IssueType.EmptyLayer))
                 {
                     DrawCrosshair(issue.BoundingRectangle);
@@ -1477,7 +1473,7 @@ public partial class MainWindow
             }
 
             LayerImageBox.Image = LayerCache.Bitmap = LayerCache.ImageBgra.ToBitmap();
-                
+
             RefreshCurrentLayerData();
 
             watch.Stop();
@@ -1818,7 +1814,7 @@ public partial class MainWindow
         if (!IsFileLoaded) return;
 
         const byte margin = 10;
-        // If ALT key is pressed when ZoomToFit is performed, the configured option for 
+        // If ALT key is pressed when ZoomToFit is performed, the configured option for
         // zoom to plate vs. zoom to print bounds will be inverted.
 
         switch (fitType)
@@ -1857,7 +1853,7 @@ public partial class MainWindow
             default:
                 throw new ArgumentOutOfRangeException(nameof(fitType), fitType, null);
         }
-            
+
     }
 
     /// <summary>
@@ -1910,9 +1906,9 @@ public partial class MainWindow
                     SelectObjectMask(location);
                     return;
                 }
-                    
+
                 SelectObjectRoi(location);
-                    
+
                 return;
             }
 
@@ -1956,7 +1952,7 @@ public partial class MainWindow
         if (pointer.Properties.IsRightButtonPressed)
         {
             ZoomToFit();
-            return; 
+            return;
         }
         e.Handled = true;
     }
@@ -1964,7 +1960,7 @@ public partial class MainWindow
     private void LayerImageBoxOnDoubleTapped(object? sender, RoutedEventArgs e)
     {
         if ((_globalModifiers & KeyModifiers.Alt) != 0 || (_globalModifiers & KeyModifiers.Shift) != 0) return;
-            
+
         e.Handled = true;
     }
 
@@ -2048,7 +2044,7 @@ public partial class MainWindow
                     operation.SelectCurrentLayer(ActualLayer);
                     layerRange = $"in the current {ActualLayer} layer";
                 }
-                
+
                 if (await this.MessageBoxQuestion($"Are you sure you want to keep only the selected region/mask(s) {layerRange}?",
                         "Keep only selected region/mask(s)?") != MessageButtonResult.Yes) return;
                 await RunOperation(operation);
@@ -2201,7 +2197,7 @@ public partial class MainWindow
     {
         if (!LayerCache.IsCached) return;
         var pointer = e.GetCurrentPoint(LayerImageBox);
-            
+
         if (!LayerImageBox.IsPointInImage(pointer.Position)) return;
         var location = LayerImageBox.PointToImage(pointer.Position).ToDotNet();
 
@@ -2262,7 +2258,7 @@ public partial class MainWindow
     public uint SelectObjectRoi(Rectangle roiRectangle)
     {
         if (roiRectangle.IsEmpty || !LayerCache.IsCached) return 0;
-        List<Rectangle> rectangles = new();
+        List<Rectangle> rectangles = [];
         for (int i = 0; i < LayerCache.Layer!.Contours.Count; i++)
         {
             var rectangle = LayerCache.Layer.Contours[i].BoundingRectangle;
@@ -2278,7 +2274,7 @@ public partial class MainWindow
             var rectangle = rectangles[i];
             roiRectangle = Rectangle.Union(roiRectangle, rectangle);
         }
-        
+
         ROI = roiRectangle;
 
         return (uint)rectangles.Count;
@@ -2300,7 +2296,7 @@ public partial class MainWindow
         CenterLayerAt(GetTransposedPoint(LayerPixelPicker.Location, true), -1);
     }
 
-    public async void SaveCurrentLayerImage()
+    public async Task SaveCurrentLayerImage()
     {
         if (!IsFileLoaded) return;
 
@@ -2310,7 +2306,7 @@ public partial class MainWindow
         LayerCache.ImageBgra.Save(filePath);
     }
 
-    public async void SaveCurrentROIImage()
+    public async Task SaveCurrentROIImage()
     {
         if (!IsFileLoaded || !LayerImageBox.HaveSelection) return;
 
@@ -2326,14 +2322,14 @@ public partial class MainWindow
     {
         Mat? cursor = null;
         var pixelEditorCursorColor = new MCvScalar(
-            Settings.PixelEditor.CursorColor.B, 
+            Settings.PixelEditor.CursorColor.B,
             Settings.PixelEditor.CursorColor.G,
             Settings.PixelEditor.CursorColor.R,
             Settings.PixelEditor.CursorColor.A);
         switch ((PixelOperation.PixelOperationType)SelectedPixelOperationTabIndex)
         {
             case PixelOperation.PixelOperationType.Drawing:
-                    
+
                 if (DrawingPixelDrawing.BrushSize > 1)
                 {
                     if ((byte)DrawingPixelDrawing.BrushShape >= 1)
@@ -2346,18 +2342,20 @@ public partial class MainWindow
 
                         //if (cursorSize % 2 != 0) cursorSize++;
 
-                        cursor = EmguExtensions.InitMat(new Size(cursorSize, cursorSize), 4);
+                        cursor = EmguExtensions.InitMat(SlicerFile!.PixelsToNormalizedPitch(cursorSize), 4);
                         //cursor.SetTo(new MCvScalar(255,255,255,255)); // Debug
 
                         /*FlipType? flip = null;
                         if (_showLayerImageFlipped)
-                        { 
+                        {
                             if (_showLayerImageFlippedHorizontally && _showLayerImageFlippedVertically) flip = FlipType.Both;
                             else if (_showLayerImageFlippedHorizontally) flip = FlipType.Horizontal;
                             else if (_showLayerImageFlippedVertically) flip = FlipType.Vertical;
                         }*/
-                        
-                        cursor.DrawPolygon((byte) DrawingPixelDrawing.BrushShape, DrawingPixelDrawing.BrushSize, new PointF(cursor.Width / 2.0f, cursor.Height / 2.0f), 
+
+                        cursor.DrawAlignedPolygon((byte) DrawingPixelDrawing.BrushShape,
+                            SlicerFile!.PixelsToNormalizedPitchF(DrawingPixelDrawing.BrushSize),
+                            new PointF(cursor.Width / 2.0f, cursor.Height / 2.0f),
                             pixelEditorCursorColor, DrawingPixelDrawing.RotationAngle, DrawingPixelDrawing.Thickness, DrawingPixelDrawing.LineType);
 
                         if (DrawingPixelDrawing.BrushShape != PixelDrawing.BrushShapeType.Circle)
@@ -2385,35 +2383,6 @@ public partial class MainWindow
                             }
                         }
                     }
-
-                    /*switch (DrawingPixelDrawing.BrushShape)
-                    {
-                        case PixelDrawing.BrushShapeType.Square:
-                            CvInvoke.Rectangle(cursor,
-                                new Rectangle(Point.Empty, new Size(DrawingPixelDrawing.BrushSize, DrawingPixelDrawing.BrushSize)),
-                                _pixelEditorCursorColor, DrawingPixelDrawing.Thickness, DrawingPixelDrawing.LineType);
-                            _pixelEditorCursorColor.V3 = 255;
-                            CvInvoke.Rectangle(cursor,
-                                new Rectangle(Point.Empty, new Size(DrawingPixelDrawing.BrushSize-1, DrawingPixelDrawing.BrushSize-1)),
-                                _pixelEditorCursorColor, 1, DrawingPixelDrawing.LineType);
-                            break;
-                        case PixelDrawing.BrushShapeType.Circle:
-                            var center = new Point(DrawingPixelDrawing.BrushSize / 2, DrawingPixelDrawing.BrushSize / 2);
-                            CvInvoke.Circle(cursor,
-                               center,
-                               center.X,
-                               _pixelEditorCursorColor,
-                               DrawingPixelDrawing.Thickness, DrawingPixelDrawing.LineType
-                               );
-                            _pixelEditorCursorColor.V3 = 255;
-                            CvInvoke.Circle(cursor,
-                                center,
-                                center.X,
-                                _pixelEditorCursorColor,
-                                1, DrawingPixelDrawing.LineType
-                            );
-                            break;
-                    }*/
                 }
                 break;
             case PixelOperation.PixelOperationType.Text:
@@ -2461,18 +2430,18 @@ public partial class MainWindow
 
                 if (diameter >= PixelEditorCursorMinDiameter)
                 {
-                    cursor = EmguExtensions.InitMat(new Size(diameter, diameter), 4);
-                    var center = new Point(diameter / 2, diameter / 2);
-                    CvInvoke.Circle(cursor,
-                        center,
-                        center.X,
+                    var diameterPitched = SlicerFile!.PixelsToNormalizedPitch(diameter);
+                    var radiusPitched = SlicerFile!.PixelsToNormalizedPitch(diameter / 2);
+                    cursor = EmguExtensions.InitMat(diameterPitched, 4);
+                    var center = radiusPitched.ToPoint();
+                    cursor.DrawCircle(center,
+                        radiusPitched,
                         pixelEditorCursorColor,
                         -1, LineType.AntiAlias
                     );
                     pixelEditorCursorColor.V3 = 255;
-                    CvInvoke.Circle(cursor,
-                        center,
-                        center.X,
+                    cursor.DrawCircle(center,
+                        radiusPitched,
                         pixelEditorCursorColor,
                         1, LineType.AntiAlias
                     );
@@ -2486,7 +2455,7 @@ public partial class MainWindow
             CvInvoke.CvtColor(cursor, cursorGrey, ColorConversion.Bgra2Gray);
             var bounds = CvInvoke.BoundingRectangle(cursorGrey);
             using var cursorRoi = new Mat(cursor, bounds);*/
-            
+
             LayerImageBox.TrackerImage = cursor.ToBitmap();
             //cursorRoi.Save("D:\\Cursor.png");
             //LayerImageBox.Cursor = new Cursor(cursor.ToBitmap(), new PixelPoint(cursor.Width / 2, cursor.Height / 2));

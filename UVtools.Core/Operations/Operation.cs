@@ -10,7 +10,6 @@ using Emgu.CV;
 using System;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -19,6 +18,7 @@ using UVtools.Core.Extensions;
 using UVtools.Core.FileFormats;
 using UVtools.Core.Layers;
 using UVtools.Core.Objects;
+using ZLinq;
 
 namespace UVtools.Core.Operations;
 
@@ -104,7 +104,7 @@ public abstract class Operation : BindableBase, IDisposable
     /// <summary>
     /// Gets the ID name of this operation, this comes from class name with "Operation" removed
     /// </summary>
-    public string Id => GetType().Name.Remove(0, ClassNameLength);
+    public string Id => GetType().Name[ClassNameLength..];
 
     /// <summary>
     /// Gets the starting layer selection
@@ -119,7 +119,7 @@ public abstract class Operation : BindableBase, IDisposable
         get => _layerRangeSelection;
         set
         {
-            if(!RaiseAndSetIfChanged(ref _layerRangeSelection, value)) return;
+            if (!RaiseAndSetIfChanged(ref _layerRangeSelection, value)) return;
             if(SlicerFile is not null) SelectLayers(_layerRangeSelection);
         }
     }
@@ -492,7 +492,7 @@ public abstract class Operation : BindableBase, IDisposable
     /// </summary>
     public void SelectLastLayer()
     {
-        LayerIndexStart = LayerIndexEnd = SlicerFile.LastLayerIndex; 
+        LayerIndexStart = LayerIndexEnd = SlicerFile.LastLayerIndex;
         LayerRangeSelection = LayerRangeSelection.Last;
     }
 
@@ -549,7 +549,7 @@ public abstract class Operation : BindableBase, IDisposable
                 throw new NotImplementedException();
         }
     }
-        
+
 
     /// <summary>
     /// Called to init the object when <see cref="SlicerFile"/> changes
@@ -782,7 +782,7 @@ public abstract class Operation : BindableBase, IDisposable
             var msg = Validate();
             if(!string.IsNullOrWhiteSpace(msg)) throw new InvalidOperationException($"{Title} can't execute due some errors:\n{msg}");
         }
-            
+
         progress ??= new OperationProgress();
         progress.Reset(ProgressAction, LayerRangeCount);
         HaveExecuted = true;
@@ -815,9 +815,9 @@ public abstract class Operation : BindableBase, IDisposable
     /// <returns></returns>
     public Layer[] GetSelectedLayerRange()
     {
-        return LayerRangeCount == SlicerFile.LayerCount 
-            ? SlicerFile.ToArray() 
-            : SlicerFile.Where((_, layerIndex) => layerIndex >= _layerIndexStart && layerIndex <= _layerIndexEnd).ToArray();
+        return LayerRangeCount == SlicerFile.LayerCount
+            ? SlicerFile.AsValueEnumerable().ToArray()
+            : SlicerFile.AsValueEnumerable().Where((_, layerIndex) => layerIndex >= _layerIndexStart && layerIndex <= _layerIndexEnd).ToArray();
     }
 
     /// <summary>
@@ -885,7 +885,7 @@ public abstract class Operation : BindableBase, IDisposable
         }
 
         var baseName = "Operation";
-        if (classNamePath.StartsWith(baseName)) classNamePath = classNamePath.Remove(0, baseName.Length);
+        if (classNamePath.StartsWith(baseName)) classNamePath = classNamePath[baseName.Length..];
         if (classNamePath == string.Empty) return null;
 
         var baseType = typeof(Operation).FullName;

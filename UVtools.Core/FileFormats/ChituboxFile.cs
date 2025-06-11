@@ -15,12 +15,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UVtools.Core.Extensions;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -37,13 +37,13 @@ public sealed class ChituboxFile : FileFormat
 
     public const byte RLE8EncodingLimit = 0x7d; // 125;
 
-    private const byte PERLAYER_SETTINGS_DISALLOW =     0; 
-    private const byte PERLAYER_SETTINGS_CBDDLP =    0x10; 
+    private const byte PERLAYER_SETTINGS_DISALLOW =     0;
+    private const byte PERLAYER_SETTINGS_CBDDLP =    0x10;
     private const byte PERLAYER_SETTINGS_CTBv2 =     0x20; // 15 for ctb v2 files and others (This disallow per layer settings)
     private const byte PERLAYER_SETTINGS_CTBv3 =     0x30; // 536870927 for ctb v3 files (This allow per layer settings, while 15 don't)
     private const byte PERLAYER_SETTINGS_CTBv4 =     0x40; // 1073741839 for ctb v4 files (This allow per layer settings, while 15 don't)
     private const byte PERLAYER_SETTINGS_CTBv5 =     0x50; // 1073741839 for ctb v5 files (This allow per layer settings, while 15 don't)
-            
+
     private const string CTBv4_DISCLAIMER = "Layout and record format for the ctb and cbddlp file types are the copyrighted programs or codes of CBD Technology (China) Inc..The Customer or User shall not in any manner reproduce, distribute, modify, decompile, disassemble, decrypt, extract, reverse engineer, lease, assign, or sublicense the said programs or codes.";
     private const ushort CTBv4_DISCLAIMER_SIZE = 320;
 
@@ -198,7 +198,7 @@ public sealed class ChituboxFile : FileFormat
         [FieldOrder(26)] public uint EncryptionKey { get; set; }
 
         /// <summary>
-        /// Gets the slicer tablet offset 
+        /// Gets the slicer tablet offset
         /// </summary>
         [FieldOrder(27)] public uint SlicerOffset { get; set; }
 
@@ -363,7 +363,7 @@ public sealed class ChituboxFile : FileFormat
     public sealed class PrintParametersV4
     {
         /*[FieldOrder(0)]
-        [FieldLength(nameof(DisclaimerLength))] 
+        [FieldLength(nameof(DisclaimerLength))]
         public string Disclaimer { get; set; } = CTBv4_DISCLAIMER; // 320 bytes
         */
 
@@ -475,7 +475,7 @@ public sealed class ChituboxFile : FileFormat
         [FieldOrder(10)]
         public uint MachineNameLength { get; set; } = (uint)DefaultMachineName.Length;
 
-        [FieldOrder(11)] 
+        [FieldOrder(11)]
         public float ResinDensity { get; set; } = 1.1f;
 
         [FieldOrder(12)]
@@ -508,12 +508,12 @@ public sealed class ChituboxFile : FileFormat
     public class Preview
     {
         /// <summary>
-        /// Gets the X dimension of the preview image, in pixels. 
+        /// Gets the X dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(0)] public uint ResolutionX { get; set; }
 
         /// <summary>
-        /// Gets the Y dimension of the preview image, in pixels. 
+        /// Gets the Y dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(1)] public uint ResolutionY { get; set; }
 
@@ -532,7 +532,7 @@ public sealed class ChituboxFile : FileFormat
         [FieldOrder(6)] public uint Unknown3    { get; set; }
         [FieldOrder(7)] public uint Unknown4    { get; set; }
 
-        
+
         public override string ToString()
         {
             return $"{nameof(ResolutionX)}: {ResolutionX}, {nameof(ResolutionY)}: {ResolutionY}, {nameof(ImageOffset)}: {ImageOffset}, {nameof(ImageLength)}: {ImageLength}, {nameof(Unknown1)}: {Unknown1}, {nameof(Unknown2)}: {Unknown2}, {nameof(Unknown3)}: {Unknown3}, {nameof(Unknown4)}: {Unknown4}";
@@ -590,7 +590,7 @@ public sealed class ChituboxFile : FileFormat
             {
                 TableSize += LayerDefEx.TABLE_SIZE;
             }
-                
+
         }
 
         public void SetFrom(Layer layer)
@@ -761,7 +761,7 @@ public sealed class ChituboxFile : FileFormat
 
         public unsafe byte[] EncodeCbddlpImage(Mat image, byte bit)
         {
-            List<byte> rawData = new();
+            List<byte> rawData = [];
             var span = image.GetBytePointer();
             var imageLength = image.GetLength();
 
@@ -824,7 +824,7 @@ public sealed class ChituboxFile : FileFormat
 
         private unsafe byte[] EncodeCtbImage(Mat image, uint layerIndex)
         {
-            List<byte> rawData = new();
+            List<byte> rawData = [];
             byte color = byte.MaxValue >> 1;
             uint stride = 0;
             var span = image.GetBytePointer();
@@ -898,8 +898,8 @@ public sealed class ChituboxFile : FileFormat
 
             AddRep();
 
-            EncodedRle = Parent!.HeaderSettings.EncryptionKey > 0 
-                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData) 
+            EncodedRle = Parent!.HeaderSettings.EncryptionKey > 0
+                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData)
                 : rawData.ToArray();
 
             DataSize = (uint)EncodedRle.Length;
@@ -999,7 +999,7 @@ public sealed class ChituboxFile : FileFormat
             return $"{nameof(LayerDef)}: {LayerDef}, {nameof(TotalSize)}: {TotalSize}, {nameof(LiftHeight)}: {LiftHeight}, {nameof(LiftSpeed)}: {LiftSpeed}, {nameof(LiftHeight2)}: {LiftHeight2}, {nameof(LiftSpeed2)}: {LiftSpeed2}, {nameof(RetractSpeed)}: {RetractSpeed}, {nameof(RetractHeight2)}: {RetractHeight2}, {nameof(RetractSpeed2)}: {RetractSpeed2}, {nameof(RestTimeBeforeLift)}: {RestTimeBeforeLift}, {nameof(RestTimeAfterLift)}: {RestTimeAfterLift}, {nameof(RestTimeAfterRetract)}: {RestTimeAfterRetract}, {nameof(LightPWM)}: {LightPWM}";
         }
 
-            
+
     }
 
     #endregion
@@ -1023,12 +1023,13 @@ public sealed class ChituboxFile : FileFormat
 
     public override string ConvertMenuGroup => "Chitubox";
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(ChituboxFile), "photon", "Chitubox Photon"),
         new(typeof(ChituboxFile), "cbddlp", "Chitubox CBDDLP"),
         new(typeof(ChituboxFile), "ctb", "Chitubox CTB"),
-        new(typeof(ChituboxFile), "gktwo.ctb", "Chitubox CTB for UniFormation GKtwo", false),
-    };
+        new(typeof(ChituboxFile), "gktwo.ctb", "Chitubox CTB for UniFormation GKtwo", false)
+    ];
 
     public override PrintParameterModifier[] PrintParameterModifiers
     {
@@ -1036,8 +1037,8 @@ public sealed class ChituboxFile : FileFormat
         {
             if (HeaderSettings.Version >= 4)
             {
-                return new[]
-                {
+                return
+                [
 
                     PrintParameterModifier.BottomLayerCount,
                     PrintParameterModifier.TransitionLayerCount,
@@ -1074,17 +1075,17 @@ public sealed class ChituboxFile : FileFormat
                     PrintParameterModifier.RetractSpeed2,
 
                     PrintParameterModifier.BottomLightPWM,
-                    PrintParameterModifier.LightPWM,
-                };
+                    PrintParameterModifier.LightPWM
+                ];
             }
 
             if (HeaderSettings.Version == 3)
             {
-                return new[]
-                {
+                return
+                [
 
                     PrintParameterModifier.BottomLayerCount,
-                    PrintParameterModifier.TransitionLayerCount, 
+                    PrintParameterModifier.TransitionLayerCount,
 
                     PrintParameterModifier.BottomLightOffDelay,
                     PrintParameterModifier.LightOffDelay,
@@ -1095,12 +1096,12 @@ public sealed class ChituboxFile : FileFormat
                     PrintParameterModifier.BottomLiftSpeed,
                     PrintParameterModifier.LiftHeight,
                     PrintParameterModifier.LiftSpeed,
-                    PrintParameterModifier.RetractSpeed,
-                };
+                    PrintParameterModifier.RetractSpeed
+                ];
             }
 
-            return new[]
-            {
+            return
+            [
 
                 PrintParameterModifier.BottomLayerCount,
 
@@ -1117,8 +1118,8 @@ public sealed class ChituboxFile : FileFormat
 
 
                 PrintParameterModifier.BottomLightPWM,
-                PrintParameterModifier.LightPWM,
-            };
+                PrintParameterModifier.LightPWM
+            ];
         }
     }
 
@@ -1127,7 +1128,7 @@ public sealed class ChituboxFile : FileFormat
     public override PrintParameterModifier[] PrintParameterPerLayerModifiers {
         get
         {
-            if (!IsCtbFile) return Array.Empty<PrintParameterModifier>(); // Only ctb files
+            if (!IsCtbFile) return []; // Only ctb files
             /* Disable for v2 beside the fields on format they are not used
              if (HeaderSettings.Version <= 2)
             {
@@ -1139,21 +1140,21 @@ public sealed class ChituboxFile : FileFormat
             }*/
             if (HeaderSettings.Version == 3)
             {
-                return new[]
-                {
+                return
+                [
                     PrintParameterModifier.PositionZ,
                     PrintParameterModifier.LightOffDelay,
                     PrintParameterModifier.ExposureTime,
                     PrintParameterModifier.LiftHeight,
                     PrintParameterModifier.LiftSpeed,
                     PrintParameterModifier.RetractSpeed,
-                    PrintParameterModifier.LightPWM,
-                };
+                    PrintParameterModifier.LightPWM
+                ];
             }
             if (HeaderSettings.Version >= 4)
             {
-                return new[]
-                {
+                return
+                [
                     PrintParameterModifier.PositionZ,
                     PrintParameterModifier.LightOffDelay,
                     PrintParameterModifier.WaitTimeBeforeCure,
@@ -1167,34 +1168,34 @@ public sealed class ChituboxFile : FileFormat
                     PrintParameterModifier.RetractSpeed,
                     PrintParameterModifier.RetractHeight2,
                     PrintParameterModifier.RetractSpeed2,
-                    PrintParameterModifier.LightPWM,
-                };
+                    PrintParameterModifier.LightPWM
+                ];
             }
 
-                
 
-            return Array.Empty<PrintParameterModifier>();
-        } 
+
+            return [];
+        }
     }
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
+    [
         new(400, 300),
         new(200, 125)
-    };
+    ];
 
-    public override uint[] AvailableVersions { get; } = { 1, 2, 3, 4, 5 };
+    public override uint[] AvailableVersions { get; } = [1, 2, 3, 4, 5];
 
     public override uint[] GetAvailableVersionsForExtension(string? extension)
     {
         if (string.IsNullOrWhiteSpace(extension)) return AvailableVersions;
-        if (extension[0] == '.') extension = extension.Remove(0, 1).ToLower();
+        if (extension[0] == '.') extension = extension[1..].ToLower();
 
         switch (extension)
         {
             case "cbddlp":
             case "photon":
-                return new uint[] {1, 2};
+                return [1, 2];
             default:
                 return AvailableVersions;
         }
@@ -1239,7 +1240,7 @@ public sealed class ChituboxFile : FileFormat
     public override float MachineZ
     {
         get => HeaderSettings.BedSizeZ > 0 ? HeaderSettings.BedSizeZ : base.MachineZ;
-        set => base.MachineZ = HeaderSettings.BedSizeZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = HeaderSettings.BedSizeZ = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     public override FlipDirection DisplayMirror
@@ -1312,7 +1313,7 @@ public sealed class ChituboxFile : FileFormat
         get => PrintParametersSettings.BottomLightOffDelay;
         set
         {
-            base.BottomLightOffDelay = PrintParametersSettings.BottomLightOffDelay = (float) Math.Round(value, 2);
+            base.BottomLightOffDelay = PrintParametersSettings.BottomLightOffDelay = MathF.Round(value, 2);
             if (HeaderSettings.Version >= 4 && value > 0)
             {
                 WaitTimeBeforeCure = 0;
@@ -1327,7 +1328,7 @@ public sealed class ChituboxFile : FileFormat
         get => HeaderSettings.LightOffDelay;
         set
         {
-            base.LightOffDelay = HeaderSettings.LightOffDelay = PrintParametersSettings.LightOffDelay = (float) Math.Round(value, 2);
+            base.LightOffDelay = HeaderSettings.LightOffDelay = PrintParametersSettings.LightOffDelay = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
             if (HeaderSettings.Version >= 4 && value > 0)
             {
                 WaitTimeBeforeCure = 0;
@@ -1370,7 +1371,7 @@ public sealed class ChituboxFile : FileFormat
 
                 return;
             }
-            base.WaitTimeBeforeCure = SlicerInfoSettings.RestTimeAfterRetract = PrintParametersV4Settings.RestTimeAfterRetract = (float)Math.Round(value, 2);
+            base.WaitTimeBeforeCure = SlicerInfoSettings.RestTimeAfterRetract = PrintParametersV4Settings.RestTimeAfterRetract = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -1382,7 +1383,7 @@ public sealed class ChituboxFile : FileFormat
     public override float BottomExposureTime
     {
         get => HeaderSettings.BottomExposureSeconds;
-        set => base.BottomExposureTime = HeaderSettings.BottomExposureSeconds = (float) Math.Round(value, 2);
+        set => base.BottomExposureTime = HeaderSettings.BottomExposureSeconds = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     public override float BottomWaitTimeAfterCure
@@ -1401,7 +1402,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.WaitTimeAfterCure = PrintParametersV4Settings.RestTimeBeforeLift = (float) Math.Round(value, 2);
+            base.WaitTimeAfterCure = PrintParametersV4Settings.RestTimeBeforeLift = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -1413,7 +1414,7 @@ public sealed class ChituboxFile : FileFormat
     public override float ExposureTime
     {
         get => HeaderSettings.LayerExposureSeconds;
-        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = (float)Math.Round(value, 2);
+        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     public override float BottomLiftHeight
@@ -1421,13 +1422,13 @@ public sealed class ChituboxFile : FileFormat
         get
         {
             if (HeaderSettings.Version <= 3) return PrintParametersSettings.BottomLiftHeight;
-            return (float)Math.Round(Math.Max(0, PrintParametersSettings.BottomLiftHeight - SlicerInfoSettings.BottomLiftHeight2), 2);
+            return MathF.Round(Math.Max(0, PrintParametersSettings.BottomLiftHeight - SlicerInfoSettings.BottomLiftHeight2), 2);
         }
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (HeaderSettings.Version <= 3) PrintParametersSettings.BottomLiftHeight = value;
-            if (HeaderSettings.Version >= 4) PrintParametersSettings.BottomLiftHeight = (float)Math.Round(value + SlicerInfoSettings.BottomLiftHeight2, 2);
+            if (HeaderSettings.Version >= 4) PrintParametersSettings.BottomLiftHeight = MathF.Round(value + SlicerInfoSettings.BottomLiftHeight2, 2, MidpointRounding.AwayFromZero);
             base.BottomLiftHeight = value;
         }
     }
@@ -1435,7 +1436,7 @@ public sealed class ChituboxFile : FileFormat
     public override float BottomLiftSpeed
     {
         get => PrintParametersSettings.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = PrintParametersSettings.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = PrintParametersSettings.BottomLiftSpeed = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     public override float LiftHeight
@@ -1447,9 +1448,9 @@ public sealed class ChituboxFile : FileFormat
         }
         set
         {
-            value = (float)Math.Round(value, 2);
+            value = MathF.Round(value, 2);
             if (HeaderSettings.Version <= 3) PrintParametersSettings.LiftHeight = value;
-            if (HeaderSettings.Version >= 4) PrintParametersSettings.LiftHeight = (float)Math.Round(value + SlicerInfoSettings.LiftHeight2, 2);
+            if (HeaderSettings.Version >= 4) PrintParametersSettings.LiftHeight = MathF.Round(value + SlicerInfoSettings.LiftHeight2, 2, MidpointRounding.AwayFromZero);
             base.LiftHeight = value;
         }
     }
@@ -1457,7 +1458,7 @@ public sealed class ChituboxFile : FileFormat
     public override float LiftSpeed
     {
         get => PrintParametersSettings.LiftSpeed;
-        set => base.LiftSpeed = PrintParametersSettings.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = PrintParametersSettings.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight2
@@ -1467,7 +1468,7 @@ public sealed class ChituboxFile : FileFormat
         {
             if (HeaderSettings.Version < 4) return;
             var bottomLiftHeight = BottomLiftHeight;
-            SlicerInfoSettings.BottomLiftHeight2 = (float)Math.Round(value, 2);
+            SlicerInfoSettings.BottomLiftHeight2 = MathF.Round(value, 2);
             BottomLiftHeight = bottomLiftHeight;
             base.BottomLiftHeight2 = SlicerInfoSettings.BottomLiftHeight2;
         }
@@ -1479,7 +1480,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.BottomLiftSpeed2 = SlicerInfoSettings.BottomLiftSpeed2 = (float)Math.Round(value, 2);
+            base.BottomLiftSpeed2 = SlicerInfoSettings.BottomLiftSpeed2 = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
         }
     }
 
@@ -1490,7 +1491,7 @@ public sealed class ChituboxFile : FileFormat
         {
             if (HeaderSettings.Version < 4) return;
             var liftHeight = LiftHeight;
-            SlicerInfoSettings.LiftHeight2 = (float)Math.Round(value, 2);
+            SlicerInfoSettings.LiftHeight2 = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
             LiftHeight = liftHeight;
             base.LiftHeight2 = SlicerInfoSettings.LiftHeight2;
         }
@@ -1502,7 +1503,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.LiftSpeed2 = SlicerInfoSettings.LiftSpeed2 = (float)Math.Round(value, 2);
+            base.LiftSpeed2 = SlicerInfoSettings.LiftSpeed2 = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
         }
     }
 
@@ -1522,7 +1523,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.WaitTimeAfterLift = SlicerInfoSettings.RestTimeAfterLift = SlicerInfoSettings.RestTimeAfterLift2 = PrintParametersV4Settings.RestTimeAfterLift = (float)Math.Round(value, 2);
+            base.WaitTimeAfterLift = SlicerInfoSettings.RestTimeAfterLift = SlicerInfoSettings.RestTimeAfterLift2 = PrintParametersV4Settings.RestTimeAfterLift = MathF.Round(value, 2, MidpointRounding.AwayFromZero);
             if (value > 0)
             {
                 BottomLightOffDelay = 0;
@@ -1537,14 +1538,14 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.BottomRetractSpeed = PrintParametersV4Settings.BottomRetractSpeed = (float)Math.Round(value, 2);
+            base.BottomRetractSpeed = PrintParametersV4Settings.BottomRetractSpeed = MathF.Round(value, 2);
         }
     }
 
     public override float RetractSpeed
     {
         get => PrintParametersSettings.RetractSpeed;
-        set => base.RetractSpeed = PrintParametersSettings.RetractSpeed = (float)Math.Round(value, 2);
+        set => base.RetractSpeed = PrintParametersSettings.RetractSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomRetractHeight2
@@ -1553,7 +1554,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            value = Math.Clamp((float)Math.Round(value, 2), 0, BottomRetractHeightTotal);
+            value = Math.Clamp(MathF.Round(value, 2), 0, BottomRetractHeightTotal);
             base.BottomRetractHeight2 = PrintParametersV4Settings.BottomRetractHeight2 = value;
         }
     }
@@ -1564,7 +1565,7 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            base.BottomRetractSpeed2 = PrintParametersV4Settings.BottomRetractSpeed2 = (float)Math.Round(value, 2);
+            base.BottomRetractSpeed2 = PrintParametersV4Settings.BottomRetractSpeed2 = MathF.Round(value, 2);
         }
     }
 
@@ -1574,15 +1575,15 @@ public sealed class ChituboxFile : FileFormat
         set
         {
             if (HeaderSettings.Version < 4) return;
-            value = Math.Clamp((float)Math.Round(value, 2), 0, RetractHeightTotal);
+            value = Math.Clamp(MathF.Round(value, 2), 0, RetractHeightTotal);
             base.RetractHeight2 = SlicerInfoSettings.RetractHeight2 = value;
-        } 
+        }
     }
 
     public override float RetractSpeed2
     {
         get => HeaderSettings.Version >= 4 ? SlicerInfoSettings.RetractSpeed2 : 0;
-        set => base.RetractSpeed2 = SlicerInfoSettings.RetractSpeed2 = (float)Math.Round(value, 2);
+        set => base.RetractSpeed2 = SlicerInfoSettings.RetractSpeed2 = MathF.Round(value, 2);
     }
 
     public override byte BottomLightPWM
@@ -1626,13 +1627,13 @@ public sealed class ChituboxFile : FileFormat
     public override float MaterialGrams
     {
         get => PrintParametersSettings.WeightG;
-        set => base.MaterialGrams = PrintParametersSettings.WeightG = (float)Math.Round(value, 3);
+        set => base.MaterialGrams = PrintParametersSettings.WeightG = MathF.Round(value, 3);
     }
 
     public override float MaterialCost
     {
-        get => (float) Math.Round(PrintParametersSettings.CostDollars, 3);
-        set => base.MaterialCost = PrintParametersSettings.CostDollars = (float) Math.Round(value, 3);
+        get => MathF.Round(PrintParametersSettings.CostDollars, 3);
+        set => base.MaterialCost = PrintParametersSettings.CostDollars = MathF.Round(value, 3);
     }
 
     public override string MachineName
@@ -1647,10 +1648,10 @@ public sealed class ChituboxFile : FileFormat
         {
             return HeaderSettings.Version switch
             {
-                <= 1 => new object[] { HeaderSettings },
-                <= 3 => new object[] { HeaderSettings, PrintParametersSettings, SlicerInfoSettings },
-                <= 4 => new object[] { HeaderSettings, PrintParametersSettings, SlicerInfoSettings, PrintParametersV4Settings },
-            /*v5*/ _ => new object[] { HeaderSettings, PrintParametersSettings, SlicerInfoSettings, PrintParametersV4Settings, ResinParametersSettings }
+                <= 1 => [HeaderSettings],
+                <= 3 => [HeaderSettings, PrintParametersSettings, SlicerInfoSettings],
+                <= 4 => [HeaderSettings, PrintParametersSettings, SlicerInfoSettings, PrintParametersV4Settings],
+            /*v5*/ _ => [HeaderSettings, PrintParametersSettings, SlicerInfoSettings, PrintParametersV4Settings, ResinParametersSettings]
             };
         }
     }
@@ -1802,7 +1803,7 @@ public sealed class ChituboxFile : FileFormat
         using var outputFile = new FileStream(TemporaryOutputFileFullPath, FileMode.Create, FileAccess.Write);
         outputFile.Seek(Helpers.Serializer.SizeOf(HeaderSettings), SeekOrigin.Begin);
 
-        Mat?[] thumbnails = { GetLargestThumbnail(), GetSmallestThumbnail() };
+        Mat?[] thumbnails = [GetLargestThumbnail(), GetSmallestThumbnail()];
         for (byte i = 0; i < thumbnails.Length; i++)
         {
             var image = thumbnails[i];
@@ -1843,22 +1844,22 @@ public sealed class ChituboxFile : FileFormat
             {
                 HeaderSettings.SlicerOffset = (uint) outputFile.Position;
                 HeaderSettings.SlicerSize = (uint)(Helpers.Serializer.SizeOf(SlicerInfoSettings) - MachineName.Length);
-                
+
                 SlicerInfoSettings.MachineNameAddress = HeaderSettings.SlicerOffset + HeaderSettings.SlicerSize;
 
                 if (HeaderSettings.Version >= 4)
                 {
-                    SlicerInfoSettings.PrintParametersV4Address = (uint) (HeaderSettings.SlicerOffset 
-                                                                          + Helpers.Serializer.SizeOf(SlicerInfoSettings) 
+                    SlicerInfoSettings.PrintParametersV4Address = (uint) (HeaderSettings.SlicerOffset
+                                                                          + Helpers.Serializer.SizeOf(SlicerInfoSettings)
                                                                           + (IsGkTwoFile ? CTBv4_GKtwo_DISCLAIMER_SIZE : CTBv4_DISCLAIMER_SIZE));
                 }
-                
+
                 outputFile.WriteSerialize(SlicerInfoSettings);
 
                 if (HeaderSettings.Version >= 4)
                 {
                     PrintParametersV4Settings.DisclaimerAddress = (uint)outputFile.Position;
-                    
+
                     if (IsGkTwoFile)
                     {
                         PrintParametersV4Settings.DisclaimerLength = outputFile.WriteBytes(Encoding.UTF8.GetBytes(CTBv4_GKtwo_DISCLAIMER));
@@ -1872,7 +1873,7 @@ public sealed class ChituboxFile : FileFormat
                     {
                         PrintParametersV4Settings.ResinParametersAddress = (uint)(outputFile.Position + Helpers.Serializer.SizeOf(PrintParametersV4Settings));
                     }
-                    
+
                     outputFile.WriteSerialize(PrintParametersV4Settings);
 
                     if (HeaderSettings.Version >= 5)
@@ -1963,7 +1964,7 @@ public sealed class ChituboxFile : FileFormat
                 }
             }
         }
-            
+
 
         outputFile.Seek(0, SeekOrigin.Begin);
         outputFile.WriteSerialize(HeaderSettings);
@@ -2100,7 +2101,7 @@ public sealed class ChituboxFile : FileFormat
                 Debug.WriteLine(layerDef);
 
                 //layerDef.EncodedRle = new byte[layerDef.DataSize];
-                        
+
                 if (HeaderSettings.Version >= 3)
                 {
                     inputFile.SeekDoWorkAndRewind(layerDef.PageNumber * PageSize + layerDef.DataAddress - 84, () =>
@@ -2136,7 +2137,7 @@ public sealed class ChituboxFile : FileFormat
                 Parallel.ForEach(batch, CoreSettings.GetParallelOptions(progress), layerIndex =>
                 {
                     progress.PauseIfRequested();
-                    
+
                     using (var mat = LayerDefinitions[0, layerIndex].Decode((uint)layerIndex))
                     {
                         _layers[layerIndex] = new Layer((uint)layerIndex, mat, this);
@@ -2164,9 +2165,10 @@ public sealed class ChituboxFile : FileFormat
             // Fixes virtual bottom properties
             SuppressRebuildPropertiesWork(() =>
             {
-                base.BottomWaitTimeBeforeCure = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeBeforeCure ?? 0;
-                base.BottomWaitTimeAfterCure = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterCure ?? 0;
-                base.BottomWaitTimeAfterLift = this.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterLift ?? 0;
+                var enumerable = this.AsValueEnumerable();
+                base.BottomWaitTimeBeforeCure = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeBeforeCure ?? 0;
+                base.BottomWaitTimeAfterCure = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterCure ?? 0;
+                base.BottomWaitTimeAfterLift = enumerable.FirstOrDefault(layer => layer is { IsBottomLayer: true, IsDummy: false })?.WaitTimeAfterLift ?? 0;
             });
         }
     }
@@ -2219,7 +2221,7 @@ public sealed class ChituboxFile : FileFormat
     #region Static Methods
     public static byte[] LayerRleCrypt(uint seed, uint layerIndex, IEnumerable<byte> input)
     {
-        var result = input.ToArray();
+        var result = input.AsValueEnumerable().ToArray();
         LayerRleCryptBuffer(seed, layerIndex, result);
         return result;
     }

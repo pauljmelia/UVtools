@@ -14,7 +14,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using UVtools.Core.Converters;
@@ -22,6 +21,7 @@ using UVtools.Core.Extensions;
 using UVtools.Core.GCode;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -29,7 +29,7 @@ namespace UVtools.Core.FileFormats;
 [XmlRoot(ElementName = "Print")]
 public class ZCodePrint
 {
-    
+
     [XmlRoot(ElementName = "Device")]
     public class ZcodePrintDevice
     {
@@ -50,14 +50,14 @@ public class ZCodePrint
 
     }
 
-    
+
     [XmlRoot(ElementName = "Profile")]
     public class ZcodePrintProfile
     {
         [XmlAttribute("name")]
         public string Name { get; set; } = "UVtools";
 
-        
+
         [XmlRoot(ElementName = "Slice")]
         public class ZcodePrintProfileSlice
         {
@@ -104,7 +104,7 @@ public class ZCodePrint
         public ZcodePrintProfileSlice Slice { get; set; } = new();
     }
 
-    
+
     [XmlRoot(ElementName = "Job")]
     public class ZcodePrintJob
     {
@@ -175,11 +175,13 @@ public sealed class ZCodeFile : FileFormat
 
     public override FileFormatType FileType => FileFormatType.Archive;
 
-    public override FileExtension[] FileExtensions { get; } = {
+    public override FileExtension[] FileExtensions { get; } =
+    [
         new(typeof(ZCodeFile), "zcode", "UnizMaker IBEE (ZCode)")
-    };
+    ];
 
-    public override PrintParameterModifier[] PrintParameterModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterModifiers { get; } =
+    [
         PrintParameterModifier.BottomLayerCount,
         PrintParameterModifier.TransitionLayerCount,
 
@@ -214,10 +216,11 @@ public sealed class ZCodeFile : FileFormat
         PrintParameterModifier.RetractSpeed2,
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
+    public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } =
+    [
         PrintParameterModifier.PositionZ,
         PrintParameterModifier.WaitTimeBeforeCure,
         PrintParameterModifier.ExposureTime,
@@ -230,10 +233,10 @@ public sealed class ZCodeFile : FileFormat
         PrintParameterModifier.RetractSpeed,
         PrintParameterModifier.RetractHeight2,
         PrintParameterModifier.RetractSpeed2,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
-    public override Size[] ThumbnailsOriginalSize { get; } = {new(640, 480)};
+    public override Size[] ThumbnailsOriginalSize { get; } = [new(640, 480)];
 
     public override uint ResolutionX
     {
@@ -249,13 +252,13 @@ public sealed class ZCodeFile : FileFormat
 
     public override float DisplayWidth
     {
-        get => (float) Math.Round(ManifestFile.Device.ResolutionX * ManifestFile.Device.PixelSize / 1000, 2);
+        get => MathF.Round(ManifestFile.Device.ResolutionX * ManifestFile.Device.PixelSize / 1000, 2);
         set => RaisePropertyChanged();
     }
 
     public override float DisplayHeight
     {
-        get => (float)Math.Round(ManifestFile.Device.ResolutionY * ManifestFile.Device.PixelSize / 1000, 2);
+        get => MathF.Round(ManifestFile.Device.ResolutionY * ManifestFile.Device.PixelSize / 1000, 2);
         set => RaisePropertyChanged();
     }
 
@@ -350,25 +353,25 @@ public sealed class ZCodeFile : FileFormat
     public override float BottomLiftHeight
     {
         get => ManifestFile.Profile.Slice.BottomLiftHeight;
-        set => base.BottomLiftHeight = ManifestFile.Profile.Slice.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = ManifestFile.Profile.Slice.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => ManifestFile.Profile.Slice.LiftHeight;
-        set => base.LiftHeight = ManifestFile.Profile.Slice.LiftHeight = (float)Math.Round(value, 2);
+        set => base.LiftHeight = ManifestFile.Profile.Slice.LiftHeight = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => ManifestFile.Profile.Slice.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = ManifestFile.Profile.Slice.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = ManifestFile.Profile.Slice.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed
     {
         get => ManifestFile.Profile.Slice.LiftSpeed;
-        set => base.LiftSpeed = ManifestFile.Profile.Slice.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = ManifestFile.Profile.Slice.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override byte LightPWM
@@ -405,13 +408,13 @@ public sealed class ZCodeFile : FileFormat
     public override float MaterialGrams
     {
         get => ManifestFile.Job.WeightG;
-        set => base.MaterialGrams = ManifestFile.Job.WeightG = (float)Math.Round(value, 3);
+        set => base.MaterialGrams = ManifestFile.Job.WeightG = MathF.Round(value, 3);
     }
 
     public override float MaterialCost
     {
         get => ManifestFile.Job.Price;
-        set => base.MaterialCost = ManifestFile.Job.Price = (float)Math.Round(value, 3);
+        set => base.MaterialCost = ManifestFile.Job.Price = MathF.Round(value, 3);
     }
 
     /*public override string MaterialName
@@ -430,7 +433,7 @@ public sealed class ZCodeFile : FileFormat
         set => base.MachineName = ManifestFile.Device.MachineModel = value;
     }
 
-    public override object[] Configs => new object[] { ManifestFile.Device, ManifestFile.Job, ManifestFile.Profile.Slice };
+    public override object[] Configs => [ManifestFile.Device, ManifestFile.Job, ManifestFile.Profile.Slice];
 
     #endregion
 
@@ -507,12 +510,12 @@ public sealed class ZCodeFile : FileFormat
             {
                 if (string.IsNullOrEmpty(line)) continue;
                 if (!line.EndsWith("==")) continue;
-                        
+
                 byte[] data = System.Convert.FromBase64String(line);
                 var decodedBytes = encryptEngine.ProcessBlock(data, 0, data.Length);
-                decodedBytes = decodedBytes.Skip(2).SkipWhile(b => b is 255 or 0).ToArray();
+                decodedBytes = decodedBytes.AsValueEnumerable().Skip(2).SkipWhile(b => b is 255 or 0).ToArray();
                 GCode!.AppendLine(Encoding.UTF8.GetString(decodedBytes));
-                        
+
                 progress++;
             }
 
@@ -531,7 +534,7 @@ public sealed class ZCodeFile : FileFormat
     {
         using var outputFile = ZipFile.Open(TemporaryOutputFileFullPath, ZipArchiveMode.Update);
 
-        var entriesToRemove = outputFile.Entries.Where(zipEntry => zipEntry.Name.EndsWith(".gcode") || zipEntry.Name.EndsWith(".xml")).ToArray();
+        var entriesToRemove = outputFile.Entries.AsValueEnumerable().Where(zipEntry => zipEntry.Name.EndsWith(".gcode") || zipEntry.Name.EndsWith(".xml")).ToArray();
         foreach (var zipEntry in entriesToRemove)
         {
             zipEntry.Delete();
@@ -562,7 +565,7 @@ public sealed class ZCodeFile : FileFormat
             var data = Encoding.UTF8.GetBytes(line);
             List<byte> padData = new(64) {0, 1, 0};
             padData.AddRange(data);
-                
+
             if (padData.Count > 64)
             {
                 throw new ArgumentOutOfRangeException($"Too long gcode line to encrypt, got: {padData.Count} bytes while expecting less than 64 bytes");

@@ -13,7 +13,7 @@ namespace UVtools.Core.Extensions;
 public static class SizeExtensions
 {
     public static readonly string[] SizeSuffixes =
-        { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+        ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
     public static string SizeSuffix(long value, byte decimalPlaces = 2, bool suffixSpaced = true)
     {
@@ -112,7 +112,7 @@ public static class SizeExtensions
     public static bool HaveZero(this SizeF size) => size.Width <= 0 || size.Height <= 0;
 
     public static float Area(this SizeF size) => size.Width * size.Height;
-    public static float Area(this SizeF size, int round) => (float)Math.Round(size.Area(), round) ;
+    public static float Area(this SizeF size, int round) => MathF.Round(size.Area(), round);
 
     public static float Max(this SizeF size) => Math.Max(size.Width, size.Height);
 

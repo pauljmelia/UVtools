@@ -41,7 +41,7 @@ namespace UVtools.Core.Printer
         public float MachineZ { get; set; }
 
         public FlipDirection DisplayMirror { get; set; }
-        
+
         public object? Tag { get; set; }
 
         public float TotalPrintTime
@@ -144,19 +144,19 @@ namespace UVtools.Core.Printer
         public SizeF Ppmm => new(Xppmm, Yppmm);
 
         /// <summary>
-        /// Gets the maximum (Width or Height) pixels per mm 
+        /// Gets the maximum (Width or Height) pixels per mm
         /// </summary>
         public float PpmmMax => Ppmm.Max();
 
         /// <summary>
         /// Gets the pixel width in millimeters
         /// </summary>
-        public float PixelWidth => DisplayWidth > 0 && ResolutionX > 0 ? (float)Math.Round(DisplayWidth / ResolutionX, 3) : 0;
+        public float PixelWidth => DisplayWidth > 0 && ResolutionX > 0 ? MathF.Round(DisplayWidth / ResolutionX, 3) : 0;
 
         /// <summary>
         /// Gets the pixel height in millimeters
         /// </summary>
-        public float PixelHeight => DisplayHeight > 0 && ResolutionY > 0 ? (float)Math.Round(DisplayHeight / ResolutionY, 3) : 0;
+        public float PixelHeight => DisplayHeight > 0 && ResolutionY > 0 ? MathF.Round(DisplayHeight / ResolutionY, 3) : 0;
 
         /// <summary>
         /// Gets the pixel size in millimeters
@@ -176,12 +176,12 @@ namespace UVtools.Core.Printer
         /// <summary>
         /// Gets the pixel width in microns
         /// </summary>
-        public float PixelWidthMicrons => DisplayWidth > 0 ? (float)Math.Round(DisplayWidth / ResolutionX * 1000, 3) : 0;
+        public float PixelWidthMicrons => DisplayWidth > 0 ? MathF.Round(DisplayWidth / ResolutionX * 1000, 3) : 0;
 
         /// <summary>
         /// Gets the pixel height in microns
         /// </summary>
-        public float PixelHeightMicrons => DisplayHeight > 0 ? (float)Math.Round(DisplayHeight / ResolutionY * 1000, 3) : 0;
+        public float PixelHeightMicrons => DisplayHeight > 0 ? MathF.Round(DisplayHeight / ResolutionY * 1000, 3) : 0;
 
         /// <summary>
         /// Gets the pixel size in microns
@@ -210,8 +210,8 @@ namespace UVtools.Core.Printer
         /// Preset list of machines
         /// </summary>
         public static Machine[] Machines =>
-            new Machine[]{
-                // Creality
+        [
+            // Creality
                 /*new(PrinterBrand.Creality, "Halot One",      "CL-60",    1620, 2560, 81,      128,     160),
                 new(PrinterBrand.Creality, "Halot One Pro",  "CL-70",    2560, 2400, 130.56f, 122.4f,  160),
                 new(PrinterBrand.Creality, "Halot One Plus", "CL-79",    4320, 2560, 172.8f,  102.4f,  160),
@@ -285,12 +285,15 @@ namespace UVtools.Core.Printer
                 new(PrinterBrand.Elegoo, "Elegoo Mars 4 DLP", "Mars 4 DLP", 4098, 2560, 132.8f, 74.7f, 150f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Mars 4 Max", "Mars 4 Max", 5760, 3600, 195.84f, 122.4f, 150f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Mars 4 Ultra", "Mars 4 Ultra", 8520, 4320, 153.36f, 77.76f, 165f, FlipDirection.Horizontally),
+                new(PrinterBrand.Elegoo, "Elegoo Mars 5 Ultra", "Mars 5 Ultra", 8520, 4320, 153.36f, 77.76f, 165f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Mars C", "Mars C", 1440, 2560, 68.04f, 120.96f, 150f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Saturn", "Saturn", 3840, 2400, 192f, 120f, 200f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Saturn 2", "Saturn 2", 7680, 4320, 218.88f, 123.12f, 250f, FlipDirection.Horizontally),
-                new(PrinterBrand.Elegoo, "Elegoo Saturn 3", "Saturn 3", 11520, 5120, 218.88f, 122.88f, 249.7f, FlipDirection.Horizontally),
+                new(PrinterBrand.Elegoo, "Elegoo Saturn 3", "Saturn 3", 11520, 5120, 218.88f, 122.88f, 250f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Saturn 3 Ultra", "Saturn 3 Ultra", 11520, 5120, 218.88f, 122.88f, 260f, FlipDirection.Horizontally),
-                new(PrinterBrand.Elegoo, "Elegoo Saturn 4 Ultra", "Saturn 4 Ultra", 11520, 5120, 218.88f, 122.88f, 220f, FlipDirection.Horizontally),
+                new(PrinterBrand.Elegoo, "Elegoo Saturn 4", "Saturn 4", 11520, 5120, 218.88f, 122.88f, 220f, FlipDirection.Horizontally),
+                new(PrinterBrand.Elegoo, "Elegoo Saturn 4 Ultra 12K", "Saturn 4 Ultra 12K", 11520, 5120, 218.88f, 122.88f, 220f, FlipDirection.Horizontally),
+                new(PrinterBrand.Elegoo, "Elegoo Saturn 4 Ultra 16K", "Saturn 4 Ultra 16K", 15120, 6230, 211.68f, 118.37f, 220f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Saturn 8K", "Saturn 8K", 7680, 4320, 218.88f, 123.12f, 210f, FlipDirection.Horizontally),
                 new(PrinterBrand.Elegoo, "Elegoo Saturn S", "Saturn S", 4098, 2560, 196.704f, 122.88f, 210f, FlipDirection.Horizontally),
 
@@ -389,8 +392,8 @@ namespace UVtools.Core.Printer
                 new(PrinterBrand.Wanhao, "Wanhao D7", "D7", 2560, 1440, 120.96f, 68.5f, 180f, FlipDirection.Horizontally),
                 new(PrinterBrand.Wanhao, "Wanhao D8", "D8", 2560, 1600, 192f, 120f, 180f, FlipDirection.Horizontally),
 
-                new(PrinterBrand.Zortrax, "Zortrax Inkspire", "Inkspire", 1440, 2560, 74.67f, 132.88f, 175f, FlipDirection.Horizontally),
-            };
+                new(PrinterBrand.Zortrax, "Zortrax Inkspire", "Inkspire", 1440, 2560, 74.67f, 132.88f, 175f, FlipDirection.Horizontally)
+        ];
 
         /// <summary>
         /// Gets all machines from PrusaSlicer profiles
@@ -488,7 +491,7 @@ namespace UVtools.Core.Printer
                 }
                 sb.AppendLine($"new(PrinterBrand.{machine.Brand}, \"{machine.Name}\", \"{machine.Model}\", {machine.ResolutionX}, {machine.ResolutionY}, {machine.DisplayWidth}f, {machine.DisplayHeight}f, {machine.MachineZ}f, FlipDirection.{machine.DisplayMirror}),");
             }
-            
+
             return sb.ToString();
         }
 

@@ -10,18 +10,17 @@
 
 using BinarySerialization;
 using Emgu.CV;
-using Emgu.CV.CvEnum;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UVtools.Core.Extensions;
 using UVtools.Core.Layers;
 using UVtools.Core.Operations;
+using ZLinq;
 
 namespace UVtools.Core.FileFormats;
 
@@ -290,12 +289,12 @@ public sealed class PHZFile : FileFormat
     public class Preview
     {
         /// <summary>
-        /// Gets the X dimension of the preview image, in pixels. 
+        /// Gets the X dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(0)] public uint ResolutionX { get; set; }
 
         /// <summary>
-        /// Gets the Y dimension of the preview image, in pixels. 
+        /// Gets the Y dimension of the preview image, in pixels.
         /// </summary>
         [FieldOrder(1)] public uint ResolutionY { get; set; }
 
@@ -448,8 +447,8 @@ public sealed class PHZFile : FileFormat
 
         public void Encode(Mat image, uint layerIndex)
         {
-            List<byte> rawData = new();
-                
+            List<byte> rawData = [];
+
             //byte color = byte.MaxValue >> 1;
             byte color = byte.MaxValue;
             uint stride = 0;
@@ -482,7 +481,7 @@ public sealed class PHZFile : FileFormat
                 var span = image.GetRowByteSpan(y);
                 for (int x = 0; x < span.Length; x++)
                 {
-                        
+
                     var grey7 = (byte)((span[x] >> 1) & 0x7f);
                     if (grey7 > 0x7c)
                     {
@@ -511,8 +510,8 @@ public sealed class PHZFile : FileFormat
             }
 
 
-            EncodedRle = Parent.HeaderSettings.EncryptionKey > 0 
-                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData) 
+            EncodedRle = Parent.HeaderSettings.EncryptionKey > 0
+                ? LayerRleCrypt(Parent.HeaderSettings.EncryptionKey, layerIndex, rawData)
                 : rawData.ToArray();
 
             DataSize = (uint) EncodedRle.Length;
@@ -539,12 +538,13 @@ public sealed class PHZFile : FileFormat
 
     public override string ConvertMenuGroup => "Chitubox";
 
-    public override FileExtension[] FileExtensions { get; } = {
-        new (typeof(PHZFile), "phz", "Chitubox PHZ"),
-    };
+    public override FileExtension[] FileExtensions { get; } =
+    [
+        new (typeof(PHZFile), "phz", "Chitubox PHZ")
+    ];
 
     public override PrintParameterModifier[] PrintParameterModifiers { get; } =
-    {
+    [
         PrintParameterModifier.BottomLayerCount,
 
         PrintParameterModifier.BottomLightOffDelay,
@@ -558,11 +558,11 @@ public sealed class PHZFile : FileFormat
         PrintParameterModifier.LiftHeight,
         PrintParameterModifier.LiftSpeed,
         PrintParameterModifier.RetractSpeed,
-            
+
 
         PrintParameterModifier.BottomLightPWM,
-        PrintParameterModifier.LightPWM,
-    };
+        PrintParameterModifier.LightPWM
+    ];
 
     /*public override PrintParameterModifier[] PrintParameterPerLayerModifiers { get; } = {
         PrintParameterModifier.ExposureSeconds,
@@ -570,12 +570,12 @@ public sealed class PHZFile : FileFormat
     };*/
 
     public override Size[] ThumbnailsOriginalSize { get; } =
-    {
-        new(400, 300), 
+    [
+        new(400, 300),
         new(200, 125)
-    };
+    ];
 
-    public override uint[] AvailableVersions { get; } = { 2 };
+    public override uint[] AvailableVersions { get; } = [2];
 
     public override uint DefaultVersion => 2;
 
@@ -617,7 +617,7 @@ public sealed class PHZFile : FileFormat
     public override float MachineZ
     {
         get => HeaderSettings.BedSizeZ > 0 ? HeaderSettings.BedSizeZ : base.MachineZ;
-        set => base.MachineZ = HeaderSettings.BedSizeZ = (float)Math.Round(value, 2);
+        set => base.MachineZ = HeaderSettings.BedSizeZ = MathF.Round(value, 2);
     }
 
     public override FlipDirection DisplayMirror
@@ -663,19 +663,19 @@ public sealed class PHZFile : FileFormat
     public override float BottomLightOffDelay
     {
         get => HeaderSettings.BottomLightOffDelay;
-        set => base.BottomLightOffDelay = HeaderSettings.BottomLightOffDelay = (float)Math.Round(value, 2);
+        set => base.BottomLightOffDelay = HeaderSettings.BottomLightOffDelay = MathF.Round(value, 2);
     }
 
     public override float LightOffDelay
     {
         get => HeaderSettings.LightOffDelay;
-        set => base.LightOffDelay = HeaderSettings.LightOffDelay = (float)Math.Round(value, 2);
+        set => base.LightOffDelay = HeaderSettings.LightOffDelay = MathF.Round(value, 2);
     }
 
     public override float BottomExposureTime
     {
         get => HeaderSettings.BottomExposureSeconds;
-        set => base.BottomExposureTime = HeaderSettings.BottomExposureSeconds = (float)Math.Round(value, 2);
+        set => base.BottomExposureTime = HeaderSettings.BottomExposureSeconds = MathF.Round(value, 2);
     }
 
     public override float BottomWaitTimeBeforeCure
@@ -701,31 +701,31 @@ public sealed class PHZFile : FileFormat
     public override float ExposureTime
     {
         get => HeaderSettings.LayerExposureSeconds;
-        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = (float)Math.Round(value, 2);
+        set => base.ExposureTime = HeaderSettings.LayerExposureSeconds = MathF.Round(value, 2);
     }
 
     public override float BottomLiftHeight
     {
         get => HeaderSettings.BottomLiftHeight;
-        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = (float)Math.Round(value, 2);
+        set => base.BottomLiftHeight = HeaderSettings.BottomLiftHeight = MathF.Round(value, 2);
     }
 
     public override float LiftHeight
     {
         get => HeaderSettings.LiftHeight;
-        set => base.LiftHeight = HeaderSettings.LiftHeight = (float)Math.Round(value, 2);
+        set => base.LiftHeight = HeaderSettings.LiftHeight = MathF.Round(value, 2);
     }
 
     public override float BottomLiftSpeed
     {
         get => HeaderSettings.BottomLiftSpeed;
-        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = (float)Math.Round(value, 2);
+        set => base.BottomLiftSpeed = HeaderSettings.BottomLiftSpeed = MathF.Round(value, 2);
     }
 
     public override float LiftSpeed
     {
         get => HeaderSettings.LiftSpeed;
-        set => base.LiftSpeed = HeaderSettings.LiftSpeed = (float)Math.Round(value, 2);
+        set => base.LiftSpeed = HeaderSettings.LiftSpeed = MathF.Round(value, 2);
     }
 
     public override float BottomRetractSpeed => RetractSpeed;
@@ -733,7 +733,7 @@ public sealed class PHZFile : FileFormat
     public override float RetractSpeed
     {
         get => HeaderSettings.RetractSpeed;
-        set => base.RetractSpeed = HeaderSettings.RetractSpeed = (float)Math.Round(value, 2);
+        set => base.RetractSpeed = HeaderSettings.RetractSpeed = MathF.Round(value, 2);
     }
 
     public override byte BottomLightPWM
@@ -770,14 +770,14 @@ public sealed class PHZFile : FileFormat
 
     public override float MaterialGrams
     {
-        get => (float) Math.Round(HeaderSettings.WeightG, 3);
-        set => base.MaterialGrams = HeaderSettings.WeightG = (float) Math.Round(value, 3);
+        get => MathF.Round(HeaderSettings.WeightG, 3);
+        set => base.MaterialGrams = HeaderSettings.WeightG = MathF.Round(value, 3);
     }
 
     public override float MaterialCost
     {
-        get => (float) Math.Round(HeaderSettings.CostDollars, 3);
-        set => base.MaterialCost = HeaderSettings.CostDollars = (float)Math.Round(value, 3);
+        get => MathF.Round(HeaderSettings.CostDollars, 3);
+        set => base.MaterialCost = HeaderSettings.CostDollars = MathF.Round(value, 3);
     }
 
     public override string MachineName
@@ -790,7 +790,7 @@ public sealed class PHZFile : FileFormat
         }
     }
 
-    public override object[] Configs => new object[] { HeaderSettings };
+    public override object[] Configs => [HeaderSettings];
 
     #endregion
 
@@ -826,12 +826,12 @@ public sealed class PHZFile : FileFormat
         using var outputFile = new FileStream(TemporaryOutputFileFullPath, FileMode.Create, FileAccess.Write);
         outputFile.Seek(Helpers.Serializer.SizeOf(HeaderSettings), SeekOrigin.Begin);
 
-        Mat?[] thumbnails = { GetSmallestThumbnail(), GetLargestThumbnail() };
+        Mat?[] thumbnails = [GetSmallestThumbnail(), GetLargestThumbnail()];
         for (byte i = 0; i < thumbnails.Length; i++)
         {
             var image = thumbnails[i];
             if (image is null) continue;
-            
+
             var previewBytes = EncodeChituImageRGB15Rle(image);
             if (previewBytes.Length == 0) continue;
 
@@ -1008,7 +1008,7 @@ public sealed class PHZFile : FileFormat
                 Parallel.ForEach(batch, CoreSettings.GetParallelOptions(progress), layerIndex =>
                 {
                     progress.PauseIfRequested();
-                    
+
                     using (var mat = LayersDefinitions[layerIndex].Decode((uint)layerIndex))
                     {
                         _layers[layerIndex] = new Layer((uint)layerIndex, mat, this);
@@ -1052,7 +1052,7 @@ public sealed class PHZFile : FileFormat
     #region Static Methods
     public static byte[] LayerRleCrypt(uint seed, uint layerIndex, IEnumerable<byte> input)
     {
-        var result = input.ToArray();
+        var result = input.AsValueEnumerable().ToArray();
         LayerRleCryptBuffer(seed, layerIndex, result);
         return result;
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using UVtools.Core;
 using UVtools.Core.Dialogs;
@@ -11,6 +12,7 @@ using UVtools.Core.Network;
 using UVtools.Core.Objects;
 using UVtools.UI.Controls;
 using UVtools.UI.Extensions;
+using ZLinq;
 
 namespace UVtools.UI.Windows;
 
@@ -45,13 +47,16 @@ public partial class SettingsWindow : WindowEx
         {
             "All slicer files"
         };
-        fileFormats.AddRange(from format in FileFormat.AvailableFormats from extension in format.FileExtensions where extension.IsVisibleOnFileFilters select $"{extension.Description} (.{extension.Extension})");
+        fileFormats.AddRange(FileFormat.AvailableFormats
+            .SelectMany(fileFormat => fileFormat.FileExtensions, (fileFormat, extension) => new { fileFormat = fileFormat, extension })
+            .Where(obj => obj.extension.IsVisibleOnFileFilters)
+            .Select(obj => $"{obj.extension.Description} (.{obj.extension.Extension})"));
         FileOpenDialogFilters = fileFormats.ToArray();
 
 
         // Derive strings for the zoom lock and crosshair fade combo-boxes from the
         // ZoomLevels constant array, and add those strings to the comboboxes.
-        ZoomRanges = AppSettings.ZoomLevels.Skip(AppSettings.ZoomLevelSkipCount).Select(
+        ZoomRanges = AppSettings.ZoomLevels.AsValueEnumerable().Skip(AppSettings.ZoomLevelSkipCount).Select(
             s => Convert.ToString(s / 100, CultureInfo.InvariantCulture) + "x").ToArray();
 
         ScrollViewerMaxHeight = this.GetScreenWorkingArea().Height - Settings.General.WindowsVerticalMargin;
@@ -103,7 +108,7 @@ public partial class SettingsWindow : WindowEx
     }
 
 
-    public async void GeneralOpenFolderField(object fieldObj)
+    public async Task GeneralOpenFolderField(object fieldObj)
     {
         var field = fieldObj.ToString()!;
         foreach (var propertyInfo in Settings.General.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -130,7 +135,7 @@ public partial class SettingsWindow : WindowEx
 
     }
 
-    public async void AutomationsOpenFileField(object fieldObj)
+    public async Task AutomationsOpenFileField(object fieldObj)
     {
         var field = fieldObj.ToString()!;
         foreach (var propertyInfo in Settings.Automations.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -162,7 +167,7 @@ public partial class SettingsWindow : WindowEx
         App.BeepIfAble();
     }
 
-    public async void SendToAddCustomLocation()
+    public async Task SendToAddCustomLocation()
     {
         var folders = await OpenFolderPickerAsync();
         if (folders.Count == 0) return;
@@ -178,7 +183,7 @@ public partial class SettingsWindow : WindowEx
         Settings.General.SendToCustomLocations.Add(directory);
     }
 
-    public async void SendToRemoveCustomLocations()
+    public async Task SendToRemoveCustomLocations()
     {
         if (SendToCustomLocationsGrid.SelectedItems.Count == 0) return;
 
@@ -189,22 +194,22 @@ public partial class SettingsWindow : WindowEx
         Settings.General.SendToCustomLocations.RemoveRange(SendToCustomLocationsGrid.SelectedItems.Cast<MappedDevice>());
     }
 
-    public async void SendToAddProcess()
+    public async Task SendToAddProcess()
     {
-        var folders = await OpenFolderPickerAsync();
-        if (folders.Count == 0) return;
-        var file = new MappedProcess(folders[0].TryGetLocalPath()!);
+        var files = await OpenFilePickerAsync();
+        if (files.Count == 0) return;
+        var file = new MappedProcess(files[0].TryGetLocalPath()!);
         if (Settings.General.SendToProcess.Contains(file))
         {
             await this.MessageBoxError("The selected process already exists on the list:\n" +
-                                       $"{folders[0].TryGetLocalPath()}");
+                                       $"{files[0].TryGetLocalPath()}");
             return;
         }
 
         Settings.General.SendToProcess.Add(file);
     }
 
-    public async void SendToRemoveProcess()
+    public async Task SendToRemoveProcess()
     {
         if (SendToProcessGrid.SelectedItems.Count == 0) return;
 
@@ -215,7 +220,7 @@ public partial class SettingsWindow : WindowEx
         Settings.General.SendToProcess.RemoveRange(SendToProcessGrid.SelectedItems.Cast<MappedProcess>());
     }
 
-    public async void AddNetworkRemotePrinter()
+    public async Task AddNetworkRemotePrinter()
     {
         var result = await this.MessageBoxQuestion("Are you sure you want to add a new remote printer", "Add new remote printer?");
         if (result != MessageButtonResult.Yes) return;
@@ -229,7 +234,7 @@ public partial class SettingsWindow : WindowEx
         NetworkRemotePrinterComboBox.SelectedItem = remotePrinter;
     }
 
-    public async void RemoveSelectedNetworkRemotePrinter()
+    public async Task RemoveSelectedNetworkRemotePrinter()
     {
         if (NetworkRemotePrinterComboBox.SelectedItem is not RemotePrinter remotePrinter) return;
         var result = await this.MessageBoxQuestion("Are you sure you want to remove the following remote printer?\n" +
@@ -238,7 +243,7 @@ public partial class SettingsWindow : WindowEx
         Settings.Network.RemotePrinters.Remove(remotePrinter);
     }
 
-    public async void DuplicateSelectedNetworkRemotePrinter()
+    public async Task DuplicateSelectedNetworkRemotePrinter()
     {
         if (NetworkRemotePrinterComboBox.SelectedItem is not RemotePrinter remotePrinter) return;
         var result = await this.MessageBoxQuestion("Are you sure you want to duplicate the following remote printer?\n" +
@@ -250,7 +255,7 @@ public partial class SettingsWindow : WindowEx
         NetworkRemotePrinterComboBox.SelectedItem = clone;
     }
 
-    public async void OnClickResetAllDefaults()
+    public async Task OnClickResetAllDefaults()
     {
         var result = await this.MessageBoxQuestion("Are you sure you want to reset all settings to the default values?", "Reset settings?");
         if (result != MessageButtonResult.Yes) return;

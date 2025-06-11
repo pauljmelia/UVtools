@@ -9,10 +9,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Xml.Serialization;
 using UVtools.Core.Extensions;
 using UVtools.Core.Suggestions;
+using ZLinq;
 
 namespace UVtools.Core.Managers;
 
@@ -40,15 +40,15 @@ public class SuggestionManager
     {
         get
         {
-            return new Suggestion[]
-            {
+            return
+            [
                 BottomLayerCount,
                 TransitionLayerCount,
                 WaitTimeBeforeCure,
                 WaitTimeAfterCure,
                 LayerHeight,
-                ModelPosition,
-            };
+                ModelPosition
+            ];
         }
         set
         {
@@ -89,7 +89,7 @@ public class SuggestionManager
 
     public Suggestion? Get(Type type)
     {
-        return Suggestions.FirstOrDefault(suggestion => suggestion.GetType() == type);
+        return Suggestions.AsValueEnumerable().FirstOrDefault(suggestion => suggestion.GetType() == type);
     }
 
     #endregion

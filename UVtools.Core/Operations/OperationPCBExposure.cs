@@ -14,7 +14,6 @@ using System.Collections.ObjectModel;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using UVtools.Core.Excellon;
 using UVtools.Core.Extensions;
@@ -22,6 +21,7 @@ using UVtools.Core.FileFormats;
 using UVtools.Core.Gerber;
 using UVtools.Core.Layers;
 using UVtools.Core.Objects;
+using ZLinq;
 
 namespace UVtools.Core.Operations;
 
@@ -68,8 +68,8 @@ public class OperationPCBExposure : Operation
 
     #region Static
 
-    public static string[] ValidExtensions => new[]
-    {
+    public static string[] ValidExtensions =>
+    [
         "gbr", // Gerber
         "gko", // Board outline layer
         "gtl", // Top layer
@@ -81,11 +81,11 @@ public class OperationPCBExposure : Operation
         "gml", // Mechanical layer
         "drl", // Drill holes
         "xln"  // Eagle drill holes
-    };
+    ];
     #endregion
 
     #region Members
-    private RangeObservableCollection<PCBExposureFile> _files = new();
+    private RangeObservableCollection<PCBExposureFile> _files = [];
 
     private bool _mergeFiles;
     private decimal _layerHeight;
@@ -134,14 +134,14 @@ public class OperationPCBExposure : Operation
         {
             sb.AppendLine("Select at least one gerber file");
         }
-        else 
+        else
         {
             foreach (var file in _files)
             {
                 if(!file.Exists) sb.AppendLine($"The file {file} does not exists");
             }
         }
-        
+
         return sb.ToString();
     }
 
@@ -257,7 +257,7 @@ public class OperationPCBExposure : Operation
         if (obj.GetType() != this.GetType()) return false;
         return Equals((OperationPCBExposure) obj);
     }
-    
+
     #endregion
 
     #region Methods
@@ -270,7 +270,7 @@ public class OperationPCBExposure : Operation
         var tmpPath = PathExtensions.GetTemporaryDirectory($"{About.Software}.");
         foreach (var entry in zip.Entries)
         {
-            if(!ValidExtensions.Any(extension => entry.Name.EndsWith($".{extension}", StringComparison.OrdinalIgnoreCase))) continue;
+            if(!ValidExtensions.AsValueEnumerable().Any(extension => entry.Name.EndsWith($".{extension}", StringComparison.OrdinalIgnoreCase))) continue;
 
             var filePath = entry.ImprovedExtractToFile(tmpPath, false);
             if (!string.IsNullOrEmpty(filePath))
@@ -289,7 +289,7 @@ public class OperationPCBExposure : Operation
             if(handleZipFiles) AddFilesFromZip(filePath);
             return;
         }
-        if(!ValidExtensions.Any(extension => filePath.EndsWith($".{extension}", StringComparison.OrdinalIgnoreCase))) return;
+        if(!ValidExtensions.AsValueEnumerable().Any(extension => filePath.EndsWith($".{extension}", StringComparison.OrdinalIgnoreCase))) return;
         var file = new PCBExposureFile(filePath);
         if (_files.Contains(file)) return;
         _files.Add(file);
@@ -305,19 +305,19 @@ public class OperationPCBExposure : Operation
 
     public void Sort() => _files.Sort();
 
-    public Mat GetMat(PCBExposureFile file)
+    public Mat GetMat(PCBExposureFile file, bool canMirror = true)
     {
         var mat = SlicerFile.CreateMat();
-        DrawMat(file, mat);
+        DrawMat(file, mat, canMirror);
         return mat;
     }
 
-    public void DrawMat(PCBExposureFile file, Mat mat)
+    public void DrawMat(PCBExposureFile file, Mat mat, bool canMirror = true)
     {
         if (!file.Exists) return;
 
-        
-        if (ExcellonDrillFormat.Extensions.Any(file.IsExtension))
+
+        if (ExcellonDrillFormat.Extensions.AsValueEnumerable().Any(file.IsExtension))
         {
             ExcellonDrillFormat.ParseAndDraw(file, mat, SlicerFile.Ppmm, _sizeMidpointRounding, new SizeF((float)OffsetX, (float)OffsetY), _enableAntiAliasing);
         }
@@ -325,13 +325,13 @@ public class OperationPCBExposure : Operation
         {
             GerberFormat.ParseAndDraw(file, mat, SlicerFile.Ppmm, _sizeMidpointRounding, new SizeF((float)OffsetX, (float)OffsetY), _enableAntiAliasing);
         }
-        
+
         //var boundingRectangle = CvInvoke.BoundingRectangle(mat);
         //var cropped = mat.Roi(new Size(boundingRectangle.Right, boundingRectangle.Bottom));
         var cropped = mat.CropByBounds();
 
         if (_invertColor) CvInvoke.BitwiseNot(cropped, cropped);
-        if (_mirror)
+        if (_mirror && canMirror)
         {
             var flip = SlicerFile.DisplayMirror;
             if (flip == FlipDirection.None) flip = FlipDirection.Horizontally;
@@ -349,40 +349,17 @@ public class OperationPCBExposure : Operation
         progress.ItemCount = FileCount;
 
         //var orderFiles = _files.OrderBy(file => file.IsExtension(".drl") || file.IsExtension(".xln")).ToArray();
-        var orderFiles = _files.OrderBy(file => ExcellonDrillFormat.Extensions.Any(file.IsExtension)).ToArray();
+        var orderFiles = _files.AsValueEnumerable().OrderBy(file => ExcellonDrillFormat.Extensions.AsValueEnumerable().Any(file.IsExtension)).ToArray();
 
         for (var i = 0; i < orderFiles.Length; i++)
         {
-            /*using var mat = GetMat(file);
-
-            if (mergeMat is null)
-            {
-                mergeMat = mat.Clone();
-            }
-            else
-            {
-                CvInvoke.Max(mergeMat, mat, mergeMat);
-            }*/
-
-            DrawMat(orderFiles[i], mergeMat);
-
+            DrawMat(orderFiles[i], mergeMat, false);
             if (!_mergeFiles)
             {
-                if (i == 0)
+                using var mat = GetMat(orderFiles[i]);
+                if (CvInvoke.HasNonZero(mat))
                 {
-                    if (CvInvoke.HasNonZero(mergeMat))
-                    {
-                        layers.Add(new Layer(mergeMat, SlicerFile));
-                    }
-                }
-                else
-                {
-                    using var mat = SlicerFile.CreateMat();
-                    DrawMat(orderFiles[i], mat);
-                    if (CvInvoke.HasNonZero(mat))
-                    {
-                        layers.Add(new Layer(mat, SlicerFile));
-                    }
+                    layers.Add(new Layer(mat, SlicerFile));
                 }
             }
 
@@ -393,6 +370,12 @@ public class OperationPCBExposure : Operation
         {
             if (CvInvoke.HasNonZero(mergeMat))
             {
+                if (_mirror)
+                {
+                    var flip = SlicerFile.DisplayMirror;
+                    if (flip == FlipDirection.None) flip = FlipDirection.Horizontally;
+                    CvInvoke.Flip(mergeMat, mergeMat, (FlipType)flip);
+                }
                 layers.Add(new Layer(mergeMat, SlicerFile));
             }
         }
@@ -414,7 +397,7 @@ public class OperationPCBExposure : Operation
 
             SlicerFile.Layers = layers.ToArray();
         }, true);
-        
+
         if (_mirror) // Reposition layers
         {
             using var op = new OperationMove(SlicerFile, Anchor.TopLeft)
@@ -443,12 +426,6 @@ public class OperationPCBExposure : Operation
         }
 
         using var croppedMat = mergeMat.CropByBounds(20);
-        /*if (_mirror)
-        {
-            var flip = SlicerFile.DisplayMirror;
-            if (flip == FlipDirection.None) flip = FlipDirection.Horizontally;
-            CvInvoke.Flip(croppedMat, croppedMat, (FlipType)flip);
-        }*/
         using var bgrMat = new Mat();
         CvInvoke.CvtColor(croppedMat, bgrMat, ColorConversion.Gray2Bgr);
         SlicerFile.SetThumbnails(bgrMat);

@@ -3,16 +3,16 @@ using Avalonia.Media;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Text;
 using UVtools.Core.Objects;
+using ZLinq;
 
 namespace UVtools.UI.Structures;
 
 public class PSProfileFolder : BindableBase
 {
     public static string AssetsPrusaSlicer => Path.Combine(App.ApplicationPath, "Assets", "PrusaSlicer");
-    private RangeObservableCollection<CheckBox> _items = new ();
+    private RangeObservableCollection<CheckBox> _items = [];
     private ushort _installed;
     private ushort _updates;
 
@@ -110,7 +110,7 @@ public class PSProfileFolder : BindableBase
             if (targetFileInfo.Exists)
             {
                 Installed++;
-                if (targetFileInfo.Length != files[i].Length || !StaticObjects.GetHashSha256(targetFileInfo.FullName).SequenceEqual(StaticObjects.GetHashSha256(files[i].FullName)))
+                if (targetFileInfo.Length != files[i].Length || !StaticObjects.GetHashSha256(targetFileInfo.FullName).AsValueEnumerable().SequenceEqual(StaticObjects.GetHashSha256(files[i].FullName)))
                 {
                     Items[i].Foreground = Brushes.Red;
                     Items[i].IsChecked = true;
