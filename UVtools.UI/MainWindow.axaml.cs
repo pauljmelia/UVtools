@@ -1,4 +1,6 @@
-﻿/*
+﻿// Copyright © Mad-Dogs. All rights reserved.
+
+/*
  *                     GNU AFFERO GENERAL PUBLIC LICENSE
  *                       Version 3, 19 November 2007
  *  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
@@ -24,6 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Web;
+
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -43,6 +46,9 @@ using StageKit.Runtime;
 using StageKit.Updatum;
 using SukiUI.Controls;
 using SukiUI.MessageBox;
+
+using Updatum;
+
 using UVtools.AvaloniaControls;
 using UVtools.Core;
 using UVtools.Core.Exceptions;
@@ -60,7 +66,9 @@ using UVtools.UI.Extensions;
 using UVtools.UI.Managers;
 using UVtools.UI.Structures;
 using UVtools.UI.Windows;
+
 using ZLinq;
+
 using Path = System.IO.Path;
 using Point = Avalonia.Point;
 using Size = Avalonia.Size;
@@ -304,6 +312,11 @@ public partial class MainWindow : GenericWindow
             {
                 WindowState = WindowState.Maximized;
             }
+        }
+
+        if (Settings.Issues.ResinTrapDetectionStartLayer > 0)
+        {
+            ResinTrapDetectionStartLayer = Settings.Issues.ResinTrapDetectionStartLayer;
         }
 
         InitializeComponent();
@@ -1298,7 +1311,7 @@ public partial class MainWindow : GenericWindow
 
         _actualLayer = 0;
         LayerCache.Clear();
-        _resinTrapDetectionStartLayer = 0;
+        _resinTrapDetectionStartLayer = Settings.Issues.ResinTrapDetectionStartLayer;
 
         VisibleThumbnailIndex = -1;
 
@@ -1330,6 +1343,7 @@ public partial class MainWindow : GenericWindow
     public async Task MenuFileSettingsClicked()
     {
         var oldTheme = Settings.General.Theme;
+        var oldDetectionLayerStart = Settings.Issues.ResinTrapDetectionStartLayer;
         var oldLayerCompressionCodec = Settings.General.LayerCompressionCodec;
         var oldLayerCompressionLevel = Settings.General.LayerCompressionLevel;
         var settingsWindow = new SettingsWindow();
@@ -1339,6 +1353,11 @@ public partial class MainWindow : GenericWindow
             if (oldTheme != Settings.General.Theme)
             {
                 App.ChangeBaseTheme(Settings.General.Theme);
+            }
+
+            if (oldDetectionLayerStart != Settings.Issues.ResinTrapDetectionStartLayer)
+            {
+                ResinTrapDetectionStartLayer = Settings.Issues.ResinTrapDetectionStartLayer;
             }
 
             //App._fluentTheme.DensityStyle = Settings.General.ThemeDensity;
@@ -1535,17 +1554,17 @@ public partial class MainWindow : GenericWindow
         };
 
         var autoUpdateButton = SukiMessageBoxButtonsFactory.CreateButton(new MaterialIconText
-            {
-                Kind = MessageWindow.IconButtonDownload,
-                Text = "Auto update"
-            }
+        {
+            Kind = MessageWindow.IconButtonDownload,
+            Text = "Auto update"
+        }
         );
 
         var manualUpdateButton = SukiMessageBoxButtonsFactory.CreateButton(new MaterialIconText
-            {
-                Kind = MessageWindow.IconButtonOpenBrowser,
-                Text = "Manual update"
-            }
+        {
+            Kind = MessageWindow.IconButtonOpenBrowser,
+            Text = "Manual update"
+        }
         );
 
         var closeBtn = SukiMessageBoxButtonsFactory.CreateButton(SukiMessageBoxResult.Cancel);
@@ -3166,41 +3185,41 @@ public partial class MainWindow : GenericWindow
             case MessageException msgEx:
                 return Dispatcher.UIThread.Invoke(() => this.MessageBoxError(msgEx.Message, title));
             case AggregateException aggEx:
-            {
-                var sb = new StringBuilder();
-
-                if (aggEx.InnerExceptions.Count > 0)
                 {
-                    if (aggEx.InnerExceptions.Count == 1)
+                    var sb = new StringBuilder();
+
+                    if (aggEx.InnerExceptions.Count > 0)
                     {
-                        if (aggEx.InnerExceptions[0] is MessageException messageException)
+                        if (aggEx.InnerExceptions.Count == 1)
                         {
-                            if (messageException.Title is not null) title = messageException.Title;
-                            sb.AppendLine(aggEx.InnerExceptions[0].Message);
+                            if (aggEx.InnerExceptions[0] is MessageException messageException)
+                            {
+                                if (messageException.Title is not null) title = messageException.Title;
+                                sb.AppendLine(aggEx.InnerExceptions[0].Message);
+                            }
+                            else
+                            {
+                                sb.AppendLine(aggEx.InnerExceptions[0].ToString());
+                            }
                         }
                         else
                         {
-                            sb.AppendLine(aggEx.InnerExceptions[0].ToString());
-                        }
-                    }
-                    else
-                    {
-                        for (var i = 0; i < aggEx.InnerExceptions.Count; i++)
-                        {
-                            if (aggEx.InnerExceptions[i] is MessageException { Title: not null } messageException)
+                            for (var i = 0; i < aggEx.InnerExceptions.Count; i++)
                             {
-                                title = messageException.Title;
-                            }
+                                if (aggEx.InnerExceptions[i] is MessageException { Title: not null } messageException)
+                                {
+                                    title = messageException.Title;
+                                }
 
-                            if (i > 0) sb.AppendLine("---------------");
-                            sb.AppendLine(
-                                $"({i + 1}) {(aggEx.InnerExceptions[i] is MessageException ? aggEx.InnerExceptions[i].Message : aggEx.InnerExceptions[i].ToString())}");
+                                if (i > 0) sb.AppendLine("---------------");
+                                sb.AppendLine(
+                                    $"({i + 1}) {(aggEx.InnerExceptions[i] is MessageException ? aggEx.InnerExceptions[i].Message : aggEx.InnerExceptions[i].ToString())}");
+                            }
                         }
                     }
-                }
 
-                return Dispatcher.UIThread.Invoke(() => this.MessageBoxError(sb.ToString(), title));
-            }
+                    return Dispatcher.UIThread.Invoke(() => this.MessageBoxError(sb.ToString(), title));
+                }
             default:
                 return Dispatcher.UIThread.Invoke(() => this.MessageBoxError(ex.ToString(), title));
         }

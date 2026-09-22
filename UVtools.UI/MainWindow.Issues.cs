@@ -1,21 +1,12 @@
-﻿/*
+﻿// Copyright © Mad-Dogs. All rights reserved.
+
+/*
  *                     GNU AFFERO GENERAL PUBLIC LICENSE
  *                       Version 3, 19 November 2007
  *  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
  *  Everyone is permitted to copy and distribute verbatim copies
  *  of this license document, but changing it is not allowed.
  */
-
-using Avalonia.Collections;
-using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
-using Avalonia.Input;
-using Avalonia.Media;
-using Avalonia.Media.Immutable;
-using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Input;
-using Emgu.CV;
-using Emgu.CV.Util;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,9 +14,23 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Avalonia.Collections;
+using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+
+using Emgu.CV;
+using Emgu.CV.Util;
+
 using EmguExtensions;
+
 using SukiUI.MessageBox;
+
 using UVtools.Core;
 using UVtools.Core.Extensions;
 using UVtools.Core.FileFormats;
@@ -34,8 +39,10 @@ using UVtools.Core.Objects;
 using UVtools.Core.Operations;
 using UVtools.UI.Controls;
 using UVtools.UI.Extensions;
-using Brushes = Avalonia.Media.Brushes;
+
 using ZLinq;
+
+using Brushes = Avalonia.Media.Brushes;
 
 namespace UVtools.UI;
 
@@ -991,6 +998,7 @@ public partial class MainWindow
             RequiredAreaToProcessCheck = Settings.Issues.ResinTrapRequiredAreaToProcessCheck,
             RequiredBlackPixelsToDrain = Settings.Issues.ResinTrapRequiredBlackPixelsToDrain,
             MaximumPixelBrightnessToDrain = Settings.Issues.ResinTrapMaximumPixelBrightnessToDrain,
+            DetectionStartLayer = Settings.Issues.ResinTrapDetectionStartLayer,
             DetectSuctionCups = Settings.Issues.ComputeSuctionCups,
             RequiredAreaToConsiderSuctionCup = Settings.Issues.SuctionCupRequiredAreaToConsider,
             RequiredHeightToConsiderSuctionCup = Settings.Issues.SuctionCupRequiredHeightToConsider

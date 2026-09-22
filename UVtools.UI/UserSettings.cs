@@ -1,3 +1,5 @@
+// Copyright © Mad-Dogs. All rights reserved.
+
 /*
  *                     GNU AFFERO GENERAL PUBLIC LICENSE
  *                       Version 3, 19 November 2007
@@ -14,9 +16,13 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Xml.Serialization;
+
 using Avalonia.Themes.Fluent;
+
 using CommunityToolkit.Mvvm.ComponentModel;
+
 using SukiUI.Enums;
+
 using UVtools.Core;
 using UVtools.Core.Extensions;
 using UVtools.Core.FileFormats;
@@ -25,6 +31,7 @@ using UVtools.Core.Network;
 using UVtools.Core.Objects;
 using UVtools.Core.Voxel;
 using ZLinq;
+
 using Color = UVtools.UI.Structures.Color;
 
 namespace UVtools.UI;
@@ -732,6 +739,8 @@ public partial class UserSettings : ObservableObject
         [ObservableProperty] public partial byte ResinTrapRequiredBlackPixelsToDrain { get; set; } = 10;
 
         [ObservableProperty] public partial byte ResinTrapMaximumPixelBrightnessToDrain { get; set; } = 30;
+
+        [ObservableProperty] public partial uint ResinTrapDetectionStartLayer { get; set; } = 0;
 
         [ObservableProperty] public partial uint SuctionCupRequiredAreaToConsider { get; set; } = 10000;
 

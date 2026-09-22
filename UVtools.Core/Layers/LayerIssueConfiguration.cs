@@ -1,4 +1,6 @@
-﻿/*
+﻿// Copyright © Mad-Dogs. All rights reserved.
+
+/*
  *                     GNU AFFERO GENERAL PUBLIC LICENSE
  *                       Version 3, 19 November 2007
  *  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
@@ -36,8 +38,8 @@ public sealed class IssuesDetectionConfiguration
 
     public IssuesDetectionConfiguration(
         IslandDetectionConfiguration islandConfig,
-        OverhangDetectionConfiguration overhangConfig, 
-        ResinTrapDetectionConfiguration resinTrapConfig, 
+        OverhangDetectionConfiguration overhangConfig,
+        ResinTrapDetectionConfiguration resinTrapConfig,
         TouchingBoundDetectionConfiguration touchingBoundConfig,
         PrintHeightDetectionConfiguration printHeightConfig,
         EmptyLayerDetectionConfiguration emptyLayerConfig)
@@ -80,12 +82,12 @@ public sealed class IssuesDetectionConfiguration
     public IssuesDetectionConfiguration Clone()
     {
         var config = new IssuesDetectionConfiguration(
-            (IslandDetectionConfiguration) IslandConfig.Clone(),
-            (OverhangDetectionConfiguration) OverhangConfig.Clone(),
-            (ResinTrapDetectionConfiguration) ResinTrapConfig.Clone(),
-            (TouchingBoundDetectionConfiguration) TouchingBoundConfig.Clone(),
-            (PrintHeightDetectionConfiguration) PrintHeightConfig.Clone(),
-            (EmptyLayerDetectionConfiguration) EmptyLayerConfig.Clone()
+            (IslandDetectionConfiguration)IslandConfig.Clone(),
+            (OverhangDetectionConfiguration)OverhangConfig.Clone(),
+            (ResinTrapDetectionConfiguration)ResinTrapConfig.Clone(),
+            (TouchingBoundDetectionConfiguration)TouchingBoundConfig.Clone(),
+            (PrintHeightDetectionConfiguration)PrintHeightConfig.Clone(),
+            (EmptyLayerDetectionConfiguration)EmptyLayerConfig.Clone()
             );
         return config;
     }
@@ -195,7 +197,7 @@ public sealed class OverhangDetectionConfiguration : DetectionConfiguration
     /// After compute overhangs, masses with a number of pixels bellow this number will be discarded (Not a overhang)
     /// </summary>
     public byte RequiredPixelsToConsider { get; set; } = 1;
-        
+
     /// <summary>
     /// Previous layer will be subtracted from current layer, after will erode by this value.
     /// The survived pixels are potential overhangs.
@@ -252,6 +254,8 @@ public sealed class ResinTrapDetectionConfiguration : DetectionConfiguration
     /// Required minimum height (in mm) to be considered a suction cup
     /// </summary>
     public decimal RequiredHeightToConsiderSuctionCup { get; set; } = 0.5m;
+
+    public uint DetectionStartLayer { get; set; } = 0;
 
 
     public ResinTrapDetectionConfiguration()

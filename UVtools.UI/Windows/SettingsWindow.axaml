@@ -1837,6 +1837,19 @@
                                                        Text="Maximum pixel intensity for a pixel to be considered a drain pixel"
                                                        ToolTip.Tip="Pixels below this intensity threshold will not be counted when evaluating if a potential resin trap is sufficiently drained." />
                                         </StackPanel>
+
+                                      <StackPanel Orientation="Horizontal"
+                                                  Spacing="10">
+                                        <NumericUpDown Width="150"
+                                                       suki:NumericUpDownExtensions.Unit="{icon:MaterialIconExt Kind=Layers}"
+                                                       Increment="1"
+                                                       Maximum="500"
+                                                       Minimum="1"
+                                                       Value="{Binding Settings.Issues.ResinTrapDetectionStartLayer}" />
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="Starting layer index for resin trap detection which will also be considered a drain layer."
+                                                   ToolTip.Tip="Use this setting to bypass complicated rafts by select the model first real layer." />
+                                      </StackPanel>
                                     </StackPanel>
                                 </suki:GroupBox>
                             </suki:GlassCard>
